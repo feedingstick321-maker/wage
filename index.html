@@ -70,7 +70,7 @@
       const [empLongevityYears, setEmpLongevityYears] = useState(0);        
       const [empRiskAllowanceType, setEmpRiskAllowanceType] = useState('none'); 
       const [empHasHolidayBonus, setEmpHasHolidayBonus] = useState(true);   
-      const [empHolidayAmount, setEmpHolidayAmount] = useState(2144500); // 1~2월 탭 명절휴가비 선택 상태
+      const [empHolidayAmount, setEmpHolidayAmount] = useState(2144500); 
       const [empHasDiligenceBonus, setEmpHasDiligenceBonus] = useState(true); 
 
       // === 3. 기간제교원 상태 ===
@@ -80,12 +80,12 @@
       const [tchHasHeadTeacher, setTchHasHeadTeacher] = useState(false);
       const [tchSpecialEdType, setTchSpecialEdType] = useState(0);
       const [tchOtherAdditions, setTchOtherAdditions] = useState(0);
-      const [tchServiceYears, setTchServiceYears] = useState(0); // 정근수당 계산용 근무연수
-      const [tchPerfRate, setTchPerfRate] = useState(50);        // 성과상여금 차등지급률
-      const [tchPerfGrade, setTchPerfGrade] = useState('B');     // 성과상여금 평가등급
+      const [tchServiceYears, setTchServiceYears] = useState(0); 
+      const [tchPerfRate, setTchPerfRate] = useState(50);        
+      const [tchPerfGrade, setTchPerfGrade] = useState('B');     
 
-      // === 4. 평균임금(공통) ===
-      const [overtime3Months, setOvertime3Months] = useState('');     
+      // === 4. 평균임금 전용 항목 (1년치 연간 총액으로 변경) ===
+      const [overtimeAnnual, setOvertimeAnnual] = useState('');     
       const [unusedLeaveAllowance, setUnusedLeaveAllowance] = useState(''); 
 
       // === 5. 서브페이지(퇴직금 등) ===
@@ -145,10 +145,14 @@
           endDateStr = endDate.toISOString().split('T')[0];
         }
 
-        const past3MonthsOvertime = parseNum(overtime3Months);
+        // 연간 시간외수당 및 연차수당 로직 (12개월로 나누어 1개월치 산출 후 3개월분 반영)
+        const parsedOvertimeAnnual = parseNum(overtimeAnnual);
+        const monthlyOvertime = Math.floor(parsedOvertimeAnnual / 12);
+        const appliedOvertime = monthlyOvertime * 3; // 3개월치 가산액에 합산
+
         const annualLeavePay = parseNum(unusedLeaveAllowance); 
-        // 기간제교원은 연차수당 없음
-        const appliedLeavePay = isTeacher ? 0 : Math.floor(annualLeavePay * (3 / 12));
+        const monthlyLeavePay = isTeacher ? 0 : Math.floor(annualLeavePay / 12);
+        const appliedLeavePay = monthlyLeavePay * 3; // 3개월치 가산액에 합산
 
         let res = {};
 
@@ -163,7 +167,6 @@
           const specialEdAmount = Number(tchSpecialEdType);
           const otherAddsAmount = Number(tchOtherAdditions);
           
-          // 정근수당 요율 계산
           let diligenceRate = 0;
           if (tchServiceYears >= 9) diligenceRate = 0.5;
           else if (tchServiceYears === 8) diligenceRate = 0.45;
@@ -175,7 +178,6 @@
           else if (tchServiceYears === 2) diligenceRate = 0.15;
           else if (tchServiceYears === 1) diligenceRate = 0.1;
           
-          // 정근수당 가산금 (월별)
           let diligenceAddOn = 30000;
           if (tchServiceYears >= 25) diligenceAddOn = 130000;
           else if (tchServiceYears >= 20) diligenceAddOn = 110000;
@@ -185,7 +187,6 @@
 
           const monthlyFixedOrdinary = basePay + teachingAmount + mealAllowance + researchAmount + homeroomAmount + headTeacherAmount + specialEdAmount + otherAddsAmount + diligenceAddOn;
 
-          // 연간 수당 로직
           const holidayBonus = Math.floor(basePay * 1.2); 
           const parsedDiligenceBonus = Math.floor(basePay * diligenceRate) * 2; 
 
@@ -206,17 +207,19 @@
           const ordinaryHourly = monthlyHours > 0 ? Math.floor(totalOrdinaryMonthly / monthlyHours) : 0;
           const ordinaryDaily = ordinaryHourly * dailyHours;
 
-          // 가족수당 완전 제외: 실제 월 급여액은 통상임금 산정용 고정액과 동일하게 처리
+          // 3개월 순수 급여액 (월 고정수당액 * 3개월)
           const actualMonthlyPay = monthlyFixedOrdinary; 
           const past3MonthsBaseTotal = actualMonthlyPay * 3; 
-          const past3MonthsPay = past3MonthsBaseTotal + past3MonthsOvertime; 
+          const past3MonthsPay = past3MonthsBaseTotal; // 비고정 수당은 별도 합산
 
           const proportionedHolidayBonus = Math.floor(holidayBonus * (3 / 12));
           const proportionedDiligenceBonus = Math.floor(parsedDiligenceBonus * (3 / 12));
           const proportionedPerfActual = Math.floor(parsedPerfActual * (3 / 12));
-          const proportionedBonus = proportionedHolidayBonus + proportionedDiligenceBonus + proportionedPerfActual;
           
-          const totalAveragePayTarget = past3MonthsPay + proportionedBonus + appliedLeavePay;
+          // 상여 및 1년치 연간 수당의 3개월분 합계
+          const proportionedBonus = proportionedHolidayBonus + proportionedDiligenceBonus + proportionedPerfActual;
+          const totalAveragePayTarget = past3MonthsPay + proportionedBonus + appliedOvertime + appliedLeavePay;
+          
           const averageDaily = totalDays > 0 ? Math.floor(totalAveragePayTarget / totalDays) : 0;
           const finalDailyWage = Math.max(ordinaryDaily, averageDaily);
           const appliedWageType = finalDailyWage === 0 ? '-' : (ordinaryDaily > averageDaily ? '통상임금' : '평균임금');
@@ -258,16 +261,18 @@
           const ordinaryHourly = monthlyHours > 0 ? Math.floor(totalOrdinaryMonthly / monthlyHours) : 0;
           const ordinaryDaily = ordinaryHourly * dailyHours;
 
-          // 가족수당 완전 제외
+          // 3개월 순수 급여액 (월 고정수당액 * 3개월)
           const actualMonthlyPay = monthlyFixedOrdinary; 
           const past3MonthsBaseTotal = actualMonthlyPay * 3; 
-          const past3MonthsPay = past3MonthsBaseTotal + past3MonthsOvertime; 
+          const past3MonthsPay = past3MonthsBaseTotal; 
 
           const proportionedHolidayBonus = Math.floor(holidayBonus * (3 / 12));
           const proportionedDiligenceBonus = Math.floor(parsedDiligenceBonus * (3 / 12));
           const proportionedBonus = proportionedHolidayBonus + proportionedDiligenceBonus;
           
-          const totalAveragePayTarget = past3MonthsPay + proportionedBonus + appliedLeavePay;
+          // 상여 및 1년치 연간 수당의 3개월분 합계
+          const totalAveragePayTarget = past3MonthsPay + proportionedBonus + appliedOvertime + appliedLeavePay;
+          
           const averageDaily = totalDays > 0 ? Math.floor(totalAveragePayTarget / totalDays) : 0;
           const finalDailyWage = Math.max(ordinaryDaily, averageDaily);
           const appliedWageType = finalDailyWage === 0 ? '-' : (ordinaryDaily > averageDaily ? '통상임금' : '평균임금');
@@ -283,9 +288,9 @@
           };
         }
 
-        return { ...res, totalDays, startDateStr, endDateStr, past3MonthsOvertime, annualLeavePay, appliedLeavePay };
+        return { ...res, totalDays, startDateStr, endDateStr, parsedOvertimeAnnual, monthlyOvertime, appliedOvertime, annualLeavePay, monthlyLeavePay, appliedLeavePay };
 
-      }, [currentTab, isTeacher, targetDate, monthlyHours, dailyHours, overtime3Months, unusedLeaveAllowance,
+      }, [currentTab, isTeacher, targetDate, monthlyHours, dailyHours, overtimeAnnual, unusedLeaveAllowance,
           empBasePaySelect, empCustomBasePay, empHasMealAllowance, empLongevityYears, empRiskAllowanceType, empHasHolidayBonus, empHolidayAmount, empHasDiligenceBonus, empConfig,
           tchHobong, tchResearchLevel, tchHasHomeroom, tchHasHeadTeacher, tchSpecialEdType, tchOtherAdditions, tchServiceYears, tchPerfRate, tchPerfGrade]);
 
@@ -659,12 +664,13 @@
               <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (자동산출)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
               <div className="pl-3 space-y-1 mt-1 mb-2 border-l-2 border-gray-200">
                 <div className="flex justify-between text-gray-500"><span>└ 기본급 및 고정수당 (3개월분)</span><span>{formatNum(calc.monthlyFixedOrdinary * 3)} 원</span></div>
-                {calc.past3MonthsOvertime > 0 && <div className="flex justify-between text-gray-500"><span>└ 시간외/기타 (직접입력)</span><span>{formatNum(calc.past3MonthsOvertime)} 원</span></div>}
               </div>
-              <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus)} 원</span></div>
+              <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 및 비고정수당 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus + calc.appliedOvertime + calc.appliedLeavePay)} 원</span></div>
               {calc.proportionedHolidayBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 명절휴가비 (3개월치)</span><span>{formatNum(calc.proportionedHolidayBonus)} 원</span></div>}
               {calc.proportionedDiligenceBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 정근수당 (3개월치)</span><span>{formatNum(calc.proportionedDiligenceBonus)} 원</span></div>}
-              <div className="flex justify-between font-medium text-gray-800 pt-1"><span>연차 가산액 (3개월치)</span><span>+ {formatNum(calc.appliedLeavePay)} 원</span></div>
+              {calc.appliedOvertime > 0 && <div className="flex justify-between text-gray-400 ml-2"><span title="연간총액 ÷ 12개월 × 3개월">└ 시간외수당 (1년치 수당 ÷ 12개월 × 3개월)</span><span>{formatNum(calc.appliedOvertime)} 원</span></div>}
+              {calc.appliedLeavePay > 0 && <div className="flex justify-between text-gray-400 ml-2"><span title="연간총액 ÷ 12개월 × 3개월">└ 연차수당 (1년치 수당 ÷ 12개월 × 3개월)</span><span>{formatNum(calc.appliedLeavePay)} 원</span></div>}
+              
               <div className="flex justify-between border-t border-gray-200 pt-2 mt-2 font-bold text-gray-700"><span>최종 산정 임금총액</span><span>{formatNum(calc.totalAveragePayTarget)} 원</span></div>
             </div>
           </div>
@@ -714,12 +720,12 @@
               <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (자동산출)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
               <div className="pl-3 space-y-1 mt-1 mb-2 border-l-2 border-gray-200">
                 <div className="flex justify-between text-gray-500"><span>└ 기본급 및 월수당 (3개월분)</span><span>{formatNum(calc.monthlyFixedOrdinary * 3)} 원</span></div>
-                {calc.past3MonthsOvertime > 0 && <div className="flex justify-between text-gray-500"><span>└ 시간외/기타 (직접입력)</span><span>{formatNum(calc.past3MonthsOvertime)} 원</span></div>}
               </div>
-              <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus)} 원</span></div>
+              <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 및 비고정수당 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus + calc.appliedOvertime)} 원</span></div>
               {calc.proportionedHolidayBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 명절휴가비 (3개월치)</span><span>{formatNum(calc.proportionedHolidayBonus)} 원</span></div>}
               {calc.proportionedDiligenceBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 정근수당 (3개월치)</span><span>{formatNum(calc.proportionedDiligenceBonus)} 원</span></div>}
               {calc.proportionedPerfActual > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 성과상여금-실제 (3개월치)</span><span>{formatNum(calc.proportionedPerfActual)} 원</span></div>}
+              {calc.appliedOvertime > 0 && <div className="flex justify-between text-gray-400 ml-2"><span title="연간총액 ÷ 12개월 × 3개월">└ 시간외수당 (1년치 수당 ÷ 12개월 × 3개월)</span><span>{formatNum(calc.appliedOvertime)} 원</span></div>}
               
               <div className="flex justify-between border-t border-gray-200 pt-2 mt-2 font-bold text-gray-700"><span>최종 산정 임금총액</span><span>{formatNum(calc.totalAveragePayTarget)} 원</span></div>
             </div>
@@ -821,16 +827,15 @@
                     </div>
                     
                     <div className="p-5 space-y-6">
-
                       <div className={`grid grid-cols-1 ${!isTeacher ? 'md:grid-cols-2' : ''} gap-4`}>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-800 mb-1">최근 3개월 시간외수당 총액</label>
-                          <input type="text" value={formatNum(overtime3Months)} onChange={(e) => setOvertime3Months(e.target.value.replace(/,/g, ''))}
-                            placeholder="금액 입력 (원)" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-right text-sm" />
+                          <label className="block text-sm font-semibold text-gray-800 mb-1">연간 시간외수당 총액 (1년치)</label>
+                          <input type="text" value={formatNum(overtimeAnnual)} onChange={(e) => setOvertimeAnnual(e.target.value.replace(/,/g, ''))}
+                            placeholder="1년간 수령한 총액 (원)" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-right text-sm" />
                         </div>
                         {!isTeacher && (
                           <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-1">연차유급휴가 미사용수당 총액</label>
+                            <label className="block text-sm font-semibold text-gray-800 mb-1">연차유급휴가 미사용수당 총액 (1년치)</label>
                             <input type="text" value={formatNum(unusedLeaveAllowance)} onChange={(e) => setUnusedLeaveAllowance(e.target.value.replace(/,/g, ''))}
                               placeholder="1년간 수령한 총액 (원)" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-right text-sm" />
                           </div>
