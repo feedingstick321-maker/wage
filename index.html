@@ -25,7 +25,7 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
-    // 아이콘 SVG 컴포넌트들
+    // 아이콘 SVG
     const Calculator = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16.01" y1="10" y2="10"/><line x1="12" x2="12.01" y1="10" y2="10"/><line x1="8" x2="8.01" y1="10" y2="10"/><line x1="16" x2="16.01" y1="14" y2="14"/><line x1="12" x2="12.01" y1="14" y2="14"/><line x1="8" x2="8.01" y1="14" y2="14"/><line x1="16" x2="16.01" y1="18" y2="18"/><line x1="12" x2="12.01" y1="18" y2="18"/><line x1="8" x2="8.01" y1="18" y2="18"/></svg>;
     const Calendar = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>;
     const Info = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
@@ -40,8 +40,42 @@
     const Umbrella = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 12a10.06 10.06 0 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/><path d="M12 2v1"/></svg>;
 
     function App() {
-      // === 화면 이동 상태 ===
-      const [currentPage, setCurrentPage] = useState('main');
+      // === 버전 및 화면 이동 상태 ===
+      const [version, setVersion] = useState('v2026_03'); // 'v2026_03' | 'v2026_01'
+      const [currentPage, setCurrentPage] = useState('main'); // 'main' | 'severance' | 'annualLeave'
+
+      // === 버전별 설정값 (동적 전환) ===
+      const config = useMemo(() => {
+        if (version === 'v2026_03') {
+          return {
+            label: "2026. 3월 이후 기준 (최신)",
+            basePay1: 2344500,
+            basePay2: 2144500,
+            meal: 160000,
+            longevity: 41000,
+            longevityMaxYears: 24,
+            risk: 70000,
+            nutritionistRisk: 120000,
+            revenue: 30000,
+            holiday: 2144500,
+            diligence: 1000000
+          };
+        } else {
+          return {
+            label: "2026. 1~2월 기준 (인상 전)",
+            basePay1: 2266000,
+            basePay2: 2066000,
+            meal: 160000,
+            longevity: 40000,
+            longevityMaxYears: 22,
+            risk: 50000,
+            nutritionistRisk: 0,
+            revenue: 30000,
+            holiday: 2144500,
+            diligence: 1000000
+          };
+        }
+      }, [version]);
 
       // === 1. 기본 근로조건 ===
       const [targetDate, setTargetDate] = useState('');      
@@ -49,17 +83,15 @@
       const [dailyHours, setDailyHours] = useState(8);       
 
       // === 2. 통상임금 산정 항목 ===
-      const [basePayType, setBasePayType] = useState(2144500);
+      // 기본급을 하드코딩하지 않고 'type1', 'type2', 'custom' 으로 상태 분리
+      const [basePaySelect, setBasePaySelect] = useState('type2');
       const [customBasePay, setCustomBasePay] = useState('');
       
       const [hasMealAllowance, setHasMealAllowance] = useState(true);
       const [longevityYears, setLongevityYears] = useState(0);        
-      
       const [riskAllowanceType, setRiskAllowanceType] = useState('none'); 
-      
       const [familySpouse, setFamilySpouse] = useState(false);        
       const [familyChildren, setFamilyChildren] = useState(0);        
-
       const [hasHolidayBonus, setHasHolidayBonus] = useState(true);   
       const [hasDiligenceBonus, setHasDiligenceBonus] = useState(true); 
 
@@ -68,10 +100,10 @@
       const [unusedLeaveAllowance, setUnusedLeaveAllowance] = useState(''); 
 
       // === 4. 서브 페이지(퇴직금/연차) 용 상태 ===
-      const [severanceStartDate, setSeveranceStartDate] = useState(''); // 기산일
-      const [severanceEndDate, setSeveranceEndDate] = useState('');     // 기준일
-      const [accumulatedAmount, setAccumulatedAmount] = useState('');   // 기적립금액
-      const [remainLeaveDays, setRemainLeaveDays] = useState('');       // 미사용 연차일수
+      const [severanceStartDate, setSeveranceStartDate] = useState(''); 
+      const [severanceEndDate, setSeveranceEndDate] = useState('');     
+      const [accumulatedAmount, setAccumulatedAmount] = useState('');   
+      const [remainLeaveDays, setRemainLeaveDays] = useState('');       
 
       useEffect(() => {
         const today = new Date();
@@ -92,23 +124,30 @@
         return allowance;
       };
 
-      // 메인 계산 로직
+      // 메인 계산 로직 (config 설정값 기반)
       const calc = useMemo(() => {
-        const basePay = basePayType === 'custom' ? parseNum(customBasePay) : basePayType;
-        const mealAllowance = hasMealAllowance ? 160000 : 0; 
-        const longevityAllowance = Math.min(longevityYears, 24) * 41000;
+        const basePay = basePaySelect === 'custom' ? parseNum(customBasePay) : (basePaySelect === 'type1' ? config.basePay1 : config.basePay2);
+        const mealAllowance = hasMealAllowance ? config.meal : 0; 
         
-        const specialEduAmount = riskAllowanceType === 'specialEdu' ? 20000 : 0;
-        const riskAmount = riskAllowanceType === 'risk' ? 70000 : 0;
-        const nutritionistRiskAmount = riskAllowanceType === 'nutritionistRisk' ? 120000 : 0;
-        const totalRiskAllowance = specialEduAmount + riskAmount + nutritionistRiskAmount;
+        const safeLongevityYears = Math.min(longevityYears, config.longevityMaxYears);
+        const longevityAllowance = safeLongevityYears * config.longevity;
+        
+        // 조리사 면허수당: 기본급의 5% (원단위 절사)
+        const cookLicenseAmount = Math.floor((basePay * 0.05) / 10) * 10;
+
+        const specialEduAmount = (version === 'v2026_03' && riskAllowanceType === 'specialEdu') ? 20000 : 0;
+        const riskAmount = riskAllowanceType === 'risk' ? config.risk : 0;
+        const cookRiskAmount = riskAllowanceType === 'cookRisk' ? (config.risk + cookLicenseAmount) : 0;
+        const nutritionistRiskAmount = (version === 'v2026_03' && riskAllowanceType === 'nutritionistRisk') ? config.nutritionistRisk : 0;
+        const revenueAmount = riskAllowanceType === 'revenue' ? config.revenue : 0;
+        const totalRiskAllowance = specialEduAmount + riskAmount + cookRiskAmount + nutritionistRiskAmount + revenueAmount;
 
         const familyAllowance = getFamilyAllowance();
         
         const monthlyFixedOrdinary = basePay + mealAllowance + longevityAllowance + totalRiskAllowance + familyAllowance;
 
-        const holidayBonus = hasHolidayBonus ? 2144500 : 0; 
-        const parsedDiligenceBonus = hasDiligenceBonus ? 1000000 : 0; 
+        const holidayBonus = hasHolidayBonus ? config.holiday : 0; 
+        const parsedDiligenceBonus = hasDiligenceBonus ? config.diligence : 0; 
         const annualOrdinaryBonus = holidayBonus + parsedDiligenceBonus;
         const monthlyAnnualOrdinary = Math.floor(annualOrdinaryBonus / 12);
 
@@ -155,19 +194,18 @@
 
         return {
           basePay, mealAllowance, longevityAllowance, familyAllowance, 
-          specialEduAmount, riskAmount, nutritionistRiskAmount, totalRiskAllowance, 
+          specialEduAmount, riskAmount, cookRiskAmount, nutritionistRiskAmount, revenueAmount, totalRiskAllowance, 
           monthlyFixedOrdinary, monthlyAnnualOrdinary, totalOrdinaryMonthly, ordinaryHourly, ordinaryDaily,
           totalDays, startDateStr, endDateStr,
           actualMonthlyPay, past3MonthsBaseTotal, past3MonthsOvertime, past3MonthsPay,
           proportionedHolidayBonus, proportionedDiligenceBonus, proportionedBonus, 
           appliedLeavePay, totalAveragePayTarget,
           averageDaily, finalDailyWage, appliedWageType,
-          holidayBonus, parsedDiligenceBonus
+          holidayBonus, parsedDiligenceBonus, safeLongevityYears
         };
-      }, [basePayType, customBasePay, hasMealAllowance, longevityYears, 
-          riskAllowanceType,
-          familySpouse, familyChildren, hasHolidayBonus, hasDiligenceBonus, overtime3Months, 
-          unusedLeaveAllowance, targetDate, monthlyHours, dailyHours]);
+      }, [basePaySelect, customBasePay, hasMealAllowance, longevityYears, 
+          riskAllowanceType, familySpouse, familyChildren, hasHolidayBonus, hasDiligenceBonus, 
+          overtime3Months, unusedLeaveAllowance, targetDate, monthlyHours, dailyHours, config]);
 
       // === 퇴직금 산출 ===
       const severanceCalc = useMemo(() => {
@@ -181,11 +219,7 @@
         const acc = parseNum(accumulatedAmount);
         const req = est - acc;
 
-        return { 
-          totalDays: empTotalDays, 
-          estimatedSeverance: est > 0 ? est : 0, 
-          requiredAmount: req 
-        };
+        return { totalDays: empTotalDays, estimatedSeverance: est > 0 ? est : 0, requiredAmount: req };
       }, [severanceStartDate, severanceEndDate, calc.finalDailyWage, accumulatedAmount]);
 
       // === 연차수당 산출 ===
@@ -195,29 +229,48 @@
         return { estimatedAllowance: est };
       }, [remainLeaveDays, calc.ordinaryDaily]);
 
-
       // === 렌더링: 메인 페이지 ===
       const renderMainPage = () => (
         <div className="py-8 px-4 sm:px-6 lg:px-8 pb-20">
-          <div className="max-w-5xl mx-auto space-y-6">
+          <div className="max-w-6xl mx-auto space-y-6">
             
+            {/* 타이틀 헤더 */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center space-x-3 text-blue-700 mb-2">
-                <Calculator className="w-8 h-8" />
-                <h1 className="text-2xl font-bold tracking-tight">교육공무직원 통상,평균임금 계산기(by손셀파)</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                <div className="flex items-center space-x-3 text-blue-700 mb-2 sm:mb-0">
+                  <Calculator className="w-8 h-8" />
+                  <h1 className="text-2xl font-bold tracking-tight">교육공무직원 통상,평균임금 계산기(by손셀파)</h1>
+                </div>
               </div>
-              <p className="text-gray-600 ml-11 leading-relaxed">
-                금액을 일일이 입력할 필요 없이 <strong>지급받는 수당 항목을 체크</strong>만 하세요.<br/>
-                최신 판례 및 <strong>최신 단체(임금)협약 기준액</strong>을 반영하여 통상임금과 평균임금을 산출하고 더 유리한 임금을 최종 적용해 드립니다.
+              <p className="text-gray-600 sm:ml-11 mt-2 leading-relaxed">
+                근로기준법 및 선택한 시기의 임금협약 기준액을 반영하여 더 유리한 임금을 최종 적용해 드립니다.<br className="hidden sm:block"/>
+                원하시는 기준 시점을 아래 탭에서 선택해 주세요.
               </p>
+            </div>
+
+            {/* 🔥 시기 선택 탭 (새롭게 추가된 핵심 기능) 🔥 */}
+            <div className="flex bg-gray-200/80 p-1.5 rounded-xl shadow-inner max-w-2xl mx-auto">
+              <button onClick={() => setVersion('v2026_03')}
+                className={`flex-1 py-3 px-4 rounded-lg font-bold text-[15px] transition-all duration-200 ${version === 'v2026_03' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-300/50'}`}>
+                2026. 3월 이후 기준 (최신)
+              </button>
+              <button onClick={() => {
+                  setVersion('v2026_01');
+                  if(riskAllowanceType === 'specialEdu' || riskAllowanceType === 'nutritionistRisk') {
+                    setRiskAllowanceType('none');
+                  }
+                }}
+                className={`flex-1 py-3 px-4 rounded-lg font-bold text-[15px] transition-all duration-200 ${version === 'v2026_01' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-300/50'}`}>
+                2026. 1월~2월 기준 (인상 전)
+              </button>
             </div>
 
             {/* 좌우 여백 확대를 위해 lg:gap-10 적용 */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
               
+              {/* 좌측: 조건 선택 폼 */}
               <div className="lg:col-span-7 space-y-6">
                 
-                {/* 1. 기본 설정 */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="bg-gray-50 px-5 py-3 border-b border-gray-200 flex items-center">
                     <Calendar className="w-5 h-5 mr-2 text-gray-500" />
@@ -242,7 +295,6 @@
                   </div>
                 </div>
 
-                {/* 2. 통상임금 항목 */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="bg-blue-50 px-5 py-3 border-b border-blue-100 flex items-center justify-between">
                     <div className="flex items-center">
@@ -256,22 +308,22 @@
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start">
                       <Scale className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-yellow-800">
-                        <strong>대법원 판례 반영:</strong> 명절휴가비와 정근수당이 <strong>통상임금</strong>에 산입되었습니다. (연간 총액의 1/12을 월 통상임금에 합산)
+                        <strong>판례 반영:</strong> 명절휴가비와 정근수당이 <strong>통상임금</strong>에 산입되었습니다. (연간 총액의 1/12을 합산)
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">기본급 (최신 직종별 기준)</label>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">기본급 (직종별)</label>
                       <select 
-                        value={basePayType} 
-                        onChange={(e) => setBasePayType(e.target.value === 'custom' ? 'custom' : Number(e.target.value))}
+                        value={basePaySelect} 
+                        onChange={(e) => setBasePaySelect(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-2"
                       >
-                        <option value={2344500}>유형 1 (월 2,344,500원)</option>
-                        <option value={2144500}>유형 2 (월 2,144,500원)</option>
+                        <option value="type1">유형 1 (월 {formatNum(config.basePay1)}원)</option>
+                        <option value="type2">유형 2 (월 {formatNum(config.basePay2)}원)</option>
                         <option value="custom">직접 입력</option>
                       </select>
-                      {basePayType === 'custom' && (
+                      {basePaySelect === 'custom' && (
                         <input type="text" value={customBasePay} onChange={(e) => setCustomBasePay(e.target.value)}
                           placeholder="기본급을 입력하세요 (원)"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-right" />
@@ -287,48 +339,63 @@
                           className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                         <div className="ml-3 flex-1 flex justify-between">
                           <span className="text-gray-800 font-medium">정액급식비</span>
-                          <span className="text-gray-600">월 160,000원</span>
+                          <span className="text-gray-600">월 {formatNum(config.meal)}원</span>
                         </div>
                       </label>
                       <div className="flex items-center p-3 border border-gray-200 rounded-lg bg-white">
                         <div className="flex-1">
                           <span className="text-gray-800 font-medium block">근속수당</span>
-                          <span className="text-xs text-gray-500">1년당 4만 1천원 (상한 24년, 98만 4천원)</span>
+                          <span className="text-xs text-gray-500">1년당 {formatNum(config.longevity/10000)}만원 (상한 {config.longevityMaxYears}년, {formatNum(config.longevity * config.longevityMaxYears)}원)</span>
                         </div>
-                        <select value={longevityYears} onChange={(e) => setLongevityYears(Number(e.target.value))}
+                        <select value={Math.min(longevityYears, config.longevityMaxYears)} onChange={(e) => setLongevityYears(Number(e.target.value))}
                           className="w-32 px-2 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 text-sm">
                           <option value={0}>해당없음 (1년 미만)</option>
-                          {[...Array(24)].map((_, i) => (
-                            <option key={i+1} value={i+1}>{i+1}년차 ({formatNum((i+1)*41000)}원)</option>
+                          {[...Array(config.longevityMaxYears)].map((_, i) => (
+                            <option key={i+1} value={i+1}>{i+1}년차 ({formatNum((i+1)*config.longevity)}원)</option>
                           ))}
-                          <option value={24}>24년 이상 (984,000원)</option>
                         </select>
                       </div>
                       <div className="p-3 border border-gray-200 rounded-lg bg-white">
-                        <span className="text-gray-800 font-medium block mb-3">특수/위험업무 수당 <span className="text-blue-600">(단일 선택)</span></span>
+                        <span className="text-gray-800 font-medium block mb-3">특수/위험업무 수당 <span className="text-blue-600 text-xs">(단일 선택)</span></span>
                         <div className="space-y-2">
                           <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
                             <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'none'} onChange={() => setRiskAllowanceType('none')} 
                               className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
                             <span className="ml-2 text-sm text-gray-700 flex-1">해당 없음</span>
                           </label>
-                          <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                            <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'specialEdu'} onChange={() => setRiskAllowanceType('specialEdu')} 
-                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
-                            <span className="ml-2 text-sm text-gray-700 flex-1">특수교육지원수당 <span className="text-gray-500 text-xs hidden sm:inline">(특수교육지도사)</span></span>
-                            <span className="text-sm text-gray-600">20,000원</span>
-                          </label>
+                          {version === 'v2026_03' && (
+                            <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                              <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'specialEdu'} onChange={() => setRiskAllowanceType('specialEdu')} 
+                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                              <span className="ml-2 text-sm text-gray-700 flex-1">특수교육지원수당 <span className="text-gray-400 text-[11px] hidden sm:inline">(특수교육지도사)</span></span>
+                              <span className="text-sm text-gray-600">20,000원</span>
+                            </label>
+                          )}
                           <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
                             <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'risk'} onChange={() => setRiskAllowanceType('risk')} 
                               className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
-                            <span className="ml-2 text-sm text-gray-700 flex-1">위험수당 <span className="text-gray-500 text-xs hidden sm:inline">(조리사, 조리실무사)</span></span>
-                            <span className="text-sm text-gray-600">70,000원</span>
+                            <span className="ml-2 text-sm text-gray-700 flex-1">위험수당 <span className="text-gray-400 text-[11px] hidden sm:inline">({version === 'v2026_03' ? '조리실무사' : '영양사, 조리실무사'})</span></span>
+                            <span className="text-sm text-gray-600">{formatNum(config.risk)}원</span>
                           </label>
                           <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                            <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'nutritionistRisk'} onChange={() => setRiskAllowanceType('nutritionistRisk')} 
+                            <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'cookRisk'} onChange={() => setRiskAllowanceType('cookRisk')} 
                               className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
-                            <span className="ml-2 text-sm text-gray-700 flex-1">위험수당+식생활지도수당 <span className="text-gray-500 text-xs hidden sm:inline">(영양사)</span></span>
-                            <span className="text-sm text-gray-600">120,000원</span>
+                            <span className="ml-2 text-sm text-gray-700 flex-1">위험수당+조리사면허수당 <span className="text-gray-400 text-[11px] hidden sm:inline">(조리사)</span></span>
+                            <span className="text-sm text-gray-600">{formatNum(config.risk + Math.floor((calc.basePay * 0.05) / 10) * 10)}원</span>
+                          </label>
+                          {version === 'v2026_03' && (
+                            <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                              <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'nutritionistRisk'} onChange={() => setRiskAllowanceType('nutritionistRisk')} 
+                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                              <span className="ml-2 text-sm text-gray-700 flex-1">위험수당+식생활지도 <span className="text-gray-400 text-[11px] hidden sm:inline">(영양사)</span></span>
+                              <span className="text-sm text-gray-600">{formatNum(config.nutritionistRisk)}원</span>
+                            </label>
+                          )}
+                          <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                            <input type="radio" name="riskAllowance" checked={riskAllowanceType === 'revenue'} onChange={() => setRiskAllowanceType('revenue')} 
+                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
+                            <span className="ml-2 text-sm text-gray-700 flex-1">세입수당 <span className="text-gray-400 text-[11px] hidden sm:inline">(행정실무사)</span></span>
+                            <span className="text-sm text-gray-600">{formatNum(config.revenue)}원</span>
                           </label>
                         </div>
                       </div>
@@ -363,21 +430,20 @@
                         <input type="checkbox" checked={hasHolidayBonus} onChange={(e) => setHasHolidayBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                         <div className="ml-3 flex-1 flex justify-between items-center">
                           <span className="text-gray-800 font-medium">명절휴가비</span>
-                          <span className="text-gray-600 text-sm">연 2,144,500원</span>
+                          <span className="text-gray-600 text-sm">연 {formatNum(config.holiday)}원</span>
                         </div>
                       </label>
                       <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                         <input type="checkbox" checked={hasDiligenceBonus} onChange={(e) => setHasDiligenceBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                         <div className="ml-3 flex-1 flex justify-between items-center">
                           <span className="text-gray-800 font-medium block">정근수당</span>
-                          <span className="text-gray-600 text-sm">연 1,000,000원</span>
+                          <span className="text-gray-600 text-sm">연 {formatNum(config.diligence)}원</span>
                         </div>
                       </label>
                     </div>
                   </div>
                 </div>
 
-                {/* 3. 평균임금 전용 항목 */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="bg-purple-50 px-5 py-3 border-b border-purple-100 flex items-center justify-between">
                     <div className="flex items-center">
@@ -405,15 +471,20 @@
 
               </div>
 
-              {/* === 우측: 계산 결과 화면 === */}
+              {/* 우측: 계산 결과 화면 */}
               <div className="lg:col-span-5 space-y-6">
                 
                 {/* 메인 결과 카드 (버튼 통합) */}
                 <div className={`rounded-xl shadow-lg p-6 border-2 transition-all ${calc.finalDailyWage > 0 ? 'bg-blue-600 border-blue-700' : 'bg-gray-100 border-gray-200'}`}>
-                  <h2 className={`text-lg font-bold mb-4 flex items-center ${calc.finalDailyWage > 0 ? 'text-white' : 'text-gray-500'}`}>
-                    <CheckCircle2 className="w-5 h-5 mr-2 opacity-80" />
-                    최종 적용 1일 임금
-                  </h2>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className={`text-lg font-bold flex items-center ${calc.finalDailyWage > 0 ? 'text-white' : 'text-gray-500'}`}>
+                      <CheckCircle2 className="w-5 h-5 mr-2 opacity-80" />
+                      최종 적용 1일 임금
+                    </h2>
+                    <span className={`text-[10px] px-2 py-1 rounded font-bold ${calc.finalDailyWage > 0 ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                      {config.label}
+                    </span>
+                  </div>
                   
                   <div className="bg-white rounded-lg p-5 shadow-inner mb-4">
                     <div className="text-center">
@@ -431,14 +502,14 @@
                     <p>근로기준법 제2조 제2항에 따라 평균임금이 통상임금보다 적으면 <strong>통상임금을 평균임금으로 적용</strong>합니다.</p>
                   </div>
 
-                  {/* 넙적한 버튼들을 삭제하고 결과 카드 내부로 깔끔하게 통합 */}
+                  {/* 깔끔하게 들어간 이동 버튼 */}
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button onClick={() => setCurrentPage('severance')} 
-                      className={`flex-1 font-bold py-2.5 px-3 rounded-lg flex justify-center items-center text-sm transition-colors shadow-sm ${calc.finalDailyWage > 0 ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>
+                      className={`flex-1 font-bold py-2.5 px-2 rounded-lg flex justify-center items-center text-sm transition-colors shadow-sm ${calc.finalDailyWage > 0 ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>
                       <Coins className="w-4 h-4 mr-1.5 opacity-80" /> 퇴직금 소요액 <ArrowRight className="w-4 h-4 ml-1 opacity-70" />
                     </button>
                     <button onClick={() => setCurrentPage('annualLeave')} 
-                      className={`flex-1 font-bold py-2.5 px-3 rounded-lg flex justify-center items-center text-sm transition-colors shadow-sm ${calc.finalDailyWage > 0 ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>
+                      className={`flex-1 font-bold py-2.5 px-2 rounded-lg flex justify-center items-center text-sm transition-colors shadow-sm ${calc.finalDailyWage > 0 ? 'bg-white text-blue-700 hover:bg-blue-50' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>
                       <Umbrella className="w-4 h-4 mr-1.5 opacity-80" /> 연차수당 <ArrowRight className="w-4 h-4 ml-1 opacity-70" />
                     </button>
                   </div>
@@ -461,8 +532,10 @@
                           {calc.mealAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 정액급식비</span><span>{formatNum(calc.mealAllowance)} 원</span></div>}
                           {calc.longevityAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 근속수당</span><span>{formatNum(calc.longevityAllowance)} 원</span></div>}
                           {calc.specialEduAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 특수교육지원수당</span><span>{formatNum(calc.specialEduAmount)} 원</span></div>}
-                          {calc.riskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당(조리사 등)</span><span>{formatNum(calc.riskAmount)} 원</span></div>}
-                          {calc.nutritionistRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당+식생활(영양사)</span><span>{formatNum(calc.nutritionistRiskAmount)} 원</span></div>}
+                          {calc.riskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당</span><span>{formatNum(calc.riskAmount)} 원</span></div>}
+                          {calc.cookRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험+면허수당(조리사)</span><span>{formatNum(calc.cookRiskAmount)} 원</span></div>}
+                          {calc.nutritionistRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당+식생활</span><span>{formatNum(calc.nutritionistRiskAmount)} 원</span></div>}
+                          {calc.revenueAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 세입수당</span><span>{formatNum(calc.revenueAmount)} 원</span></div>}
                           {calc.familyAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 가족수당</span><span>{formatNum(calc.familyAllowance)} 원</span></div>}
                         </div>
                         {calc.monthlyAnnualOrdinary > 0 && (
@@ -491,8 +564,10 @@
                           {calc.mealAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 정액급식비 (3개월분)</span><span>{formatNum(calc.mealAllowance * 3)} 원</span></div>}
                           {calc.longevityAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 근속수당 (3개월분)</span><span>{formatNum(calc.longevityAllowance * 3)} 원</span></div>}
                           {calc.specialEduAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 특수교육지원수당 (3개월분)</span><span>{formatNum(calc.specialEduAmount * 3)} 원</span></div>}
-                          {calc.riskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당(조리사 등) (3개월분)</span><span>{formatNum(calc.riskAmount * 3)} 원</span></div>}
-                          {calc.nutritionistRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당+식생활(영양사) (3개월분)</span><span>{formatNum(calc.nutritionistRiskAmount * 3)} 원</span></div>}
+                          {calc.riskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당 (3개월분)</span><span>{formatNum(calc.riskAmount * 3)} 원</span></div>}
+                          {calc.cookRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험+면허수당(조리사) (3개월분)</span><span>{formatNum(calc.cookRiskAmount * 3)} 원</span></div>}
+                          {calc.nutritionistRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당+식생활 (3개월분)</span><span>{formatNum(calc.nutritionistRiskAmount * 3)} 원</span></div>}
+                          {calc.revenueAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 세입수당 (3개월분)</span><span>{formatNum(calc.revenueAmount * 3)} 원</span></div>}
                           {calc.familyAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 가족수당 (3개월분)</span><span>{formatNum(calc.familyAllowance * 3)} 원</span></div>}
                           {calc.past3MonthsOvertime > 0 && <div className="flex justify-between text-gray-500"><span>└ 시간외/기타 (직접입력)</span><span>{formatNum(calc.past3MonthsOvertime)} 원</span></div>}
                         </div>
@@ -526,7 +601,10 @@
               </div>
 
               <div className="bg-teal-50 p-4 rounded-lg mb-6 flex justify-between items-center border border-teal-100">
-                <span className="font-semibold text-teal-900">가져온 최종 1일 임금</span>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-teal-900">가져온 최종 1일 임금</span>
+                  <span className="text-xs text-teal-700 mt-0.5">적용 기준: {config.label}</span>
+                </div>
                 <span className="text-2xl font-bold text-teal-700">{formatNum(calc.finalDailyWage)} 원</span>
               </div>
               
@@ -596,7 +674,10 @@
 
               <div className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-semibold text-indigo-900">기준 임금 (1일 통상임금)</span>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-indigo-900">기준 임금 (1일 통상임금)</span>
+                    <span className="text-xs text-indigo-700 mt-0.5">적용 기준: {config.label}</span>
+                  </div>
                   <span className="text-2xl font-bold text-indigo-700">{formatNum(calc.ordinaryDaily)} 원</span>
                 </div>
                 <p className="text-xs text-indigo-600 text-right mt-1">※ 근로기준법상 연차수당은 <strong>'통상임금'</strong>을 기준으로 산정합니다.</p>
