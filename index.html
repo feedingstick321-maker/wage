@@ -70,6 +70,7 @@
       const [empLongevityYears, setEmpLongevityYears] = useState(0);        
       const [empRiskAllowanceType, setEmpRiskAllowanceType] = useState('none'); 
       const [empHasHolidayBonus, setEmpHasHolidayBonus] = useState(true);   
+      const [empHolidayAmount, setEmpHolidayAmount] = useState(2144500); // 1~2월 탭 명절휴가비 선택 상태
       const [empHasDiligenceBonus, setEmpHasDiligenceBonus] = useState(true); 
 
       // === 3. 기간제교원 상태 ===
@@ -84,9 +85,6 @@
       const [tchPerfGrade, setTchPerfGrade] = useState('B');     // 성과상여금 평가등급
 
       // === 4. 평균임금(공통) ===
-      const [familySpouse, setFamilySpouse] = useState(false);        
-      const [familyChildren, setFamilyChildren] = useState(0);        
-      const [familyOthers, setFamilyOthers] = useState(0);            
       const [overtime3Months, setOvertime3Months] = useState('');     
       const [unusedLeaveAllowance, setUnusedLeaveAllowance] = useState(''); 
 
@@ -105,16 +103,6 @@
 
       const formatNum = (num) => num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : '0';
       const parseNum = (str) => parseInt(str.toString().replace(/,/g, ''), 10) || 0;
-
-      const getFamilyAllowance = () => {
-        let allowance = 0;
-        if (familySpouse) allowance += 40000;
-        if (familyChildren >= 1) allowance += 30000;
-        if (familyChildren >= 2) allowance += 70000;
-        if (familyChildren >= 3) allowance += (familyChildren - 2) * 110000;
-        if (familyOthers >= 1) allowance += familyOthers * 20000;
-        return allowance;
-      };
 
       // 교육공무직 버전 설정
       const empConfig = useMemo(() => {
@@ -157,7 +145,6 @@
           endDateStr = endDate.toISOString().split('T')[0];
         }
 
-        const familyAllowanceAmount = getFamilyAllowance();
         const past3MonthsOvertime = parseNum(overtime3Months);
         const annualLeavePay = parseNum(unusedLeaveAllowance); 
         // 기간제교원은 연차수당 없음
@@ -219,7 +206,8 @@
           const ordinaryHourly = monthlyHours > 0 ? Math.floor(totalOrdinaryMonthly / monthlyHours) : 0;
           const ordinaryDaily = ordinaryHourly * dailyHours;
 
-          const actualMonthlyPay = monthlyFixedOrdinary + familyAllowanceAmount; 
+          // 가족수당 완전 제외: 실제 월 급여액은 통상임금 산정용 고정액과 동일하게 처리
+          const actualMonthlyPay = monthlyFixedOrdinary; 
           const past3MonthsBaseTotal = actualMonthlyPay * 3; 
           const past3MonthsPay = past3MonthsBaseTotal + past3MonthsOvertime; 
 
@@ -259,7 +247,9 @@
           const totalRiskAllowance = specialEduAmount + riskAmount + cookRiskAmount + nutritionistRiskAmount + revenueAmount;
           const monthlyFixedOrdinary = basePay + mealAllowance + longevityAllowance + totalRiskAllowance;
 
-          const holidayBonus = empHasHolidayBonus ? empConfig.holiday : 0; 
+          const holidayBonus = empHasHolidayBonus 
+            ? (currentTab === 'emp_v2026_01' ? empHolidayAmount : empConfig.holiday) 
+            : 0; 
           const parsedDiligenceBonus = empHasDiligenceBonus ? empConfig.diligence : 0; 
           const annualOrdinaryBonus = holidayBonus + parsedDiligenceBonus;
           const monthlyAnnualOrdinary = Math.floor(annualOrdinaryBonus / 12);
@@ -268,7 +258,8 @@
           const ordinaryHourly = monthlyHours > 0 ? Math.floor(totalOrdinaryMonthly / monthlyHours) : 0;
           const ordinaryDaily = ordinaryHourly * dailyHours;
 
-          const actualMonthlyPay = monthlyFixedOrdinary + familyAllowanceAmount; 
+          // 가족수당 완전 제외
+          const actualMonthlyPay = monthlyFixedOrdinary; 
           const past3MonthsBaseTotal = actualMonthlyPay * 3; 
           const past3MonthsPay = past3MonthsBaseTotal + past3MonthsOvertime; 
 
@@ -292,10 +283,10 @@
           };
         }
 
-        return { ...res, totalDays, startDateStr, endDateStr, familyAllowanceAmount, past3MonthsOvertime, annualLeavePay, appliedLeavePay };
+        return { ...res, totalDays, startDateStr, endDateStr, past3MonthsOvertime, annualLeavePay, appliedLeavePay };
 
-      }, [currentTab, isTeacher, targetDate, monthlyHours, dailyHours, familySpouse, familyChildren, familyOthers, overtime3Months, unusedLeaveAllowance,
-          empBasePaySelect, empCustomBasePay, empHasMealAllowance, empLongevityYears, empRiskAllowanceType, empHasHolidayBonus, empHasDiligenceBonus, empConfig,
+      }, [currentTab, isTeacher, targetDate, monthlyHours, dailyHours, overtime3Months, unusedLeaveAllowance,
+          empBasePaySelect, empCustomBasePay, empHasMealAllowance, empLongevityYears, empRiskAllowanceType, empHasHolidayBonus, empHolidayAmount, empHasDiligenceBonus, empConfig,
           tchHobong, tchResearchLevel, tchHasHomeroom, tchHasHeadTeacher, tchSpecialEdType, tchOtherAdditions, tchServiceYears, tchPerfRate, tchPerfGrade]);
 
       // === 퇴직금 산출 ===
@@ -424,14 +415,26 @@
               <div className="space-y-3">
                 <label className="block text-sm font-semibold text-gray-800">연간 수당</label>
                 <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" checked={empHasHolidayBonus} onChange={(e) => setEmpHasHolidayBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <div className="ml-3 flex-1 flex justify-between items-center">
+                  <input type="checkbox" checked={empHasHolidayBonus} onChange={(e) => setEmpHasHolidayBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0" />
+                  <div className="ml-3 flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <span className="text-gray-800 font-medium">명절휴가비</span>
-                    <span className="text-gray-600 text-sm">연 {formatNum(empConfig.holiday)}원</span>
+                    {currentTab === 'emp_v2026_01' ? (
+                      <select 
+                        value={empHolidayAmount} 
+                        onChange={(e) => setEmpHolidayAmount(Number(e.target.value))}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2 py-1.5 border border-gray-300 rounded focus:ring-blue-500 text-sm text-gray-700 bg-white"
+                      >
+                        <option value={2144500}>연 2,144,500원</option>
+                        <option value={1850000}>연 1,850,000원 (1월 초근 통상임금 계산용)</option>
+                      </select>
+                    ) : (
+                      <span className="text-gray-600 text-sm">연 {formatNum(empConfig.holiday)}원</span>
+                    )}
                   </div>
                 </label>
                 <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" checked={empHasDiligenceBonus} onChange={(e) => setEmpHasDiligenceBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                  <input type="checkbox" checked={empHasDiligenceBonus} onChange={(e) => setEmpHasDiligenceBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0" />
                   <div className="ml-3 flex-1 flex justify-between items-center">
                     <span className="text-gray-800 font-medium block">정근수당</span>
                     <span className="text-gray-600 text-sm">연 {formatNum(empConfig.diligence)}원</span>
@@ -653,10 +656,9 @@
             </div>
             <div className="text-xs text-gray-600">
               <div className="flex justify-between text-gray-500 mb-2"><span>산정 기준일수</span><span>{calc.totalDays} 일</span></div>
-              <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (가족수당 포함)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
+              <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (자동산출)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
               <div className="pl-3 space-y-1 mt-1 mb-2 border-l-2 border-gray-200">
                 <div className="flex justify-between text-gray-500"><span>└ 기본급 및 고정수당 (3개월분)</span><span>{formatNum(calc.monthlyFixedOrdinary * 3)} 원</span></div>
-                {calc.familyAllowanceAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 가족수당 (3개월분)</span><span>{formatNum(calc.familyAllowanceAmount * 3)} 원</span></div>}
                 {calc.past3MonthsOvertime > 0 && <div className="flex justify-between text-gray-500"><span>└ 시간외/기타 (직접입력)</span><span>{formatNum(calc.past3MonthsOvertime)} 원</span></div>}
               </div>
               <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus)} 원</span></div>
@@ -709,10 +711,9 @@
             </div>
             <div className="text-xs text-gray-600">
               <div className="flex justify-between text-gray-500 mb-2"><span>산정 기준일수</span><span>{calc.totalDays} 일</span></div>
-              <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (가족수당 포함)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
+              <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (자동산출)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
               <div className="pl-3 space-y-1 mt-1 mb-2 border-l-2 border-gray-200">
                 <div className="flex justify-between text-gray-500"><span>└ 기본급 및 월수당 (3개월분)</span><span>{formatNum(calc.monthlyFixedOrdinary * 3)} 원</span></div>
-                {calc.familyAllowanceAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 가족수당 (3개월분)</span><span>{formatNum(calc.familyAllowanceAmount * 3)} 원</span></div>}
                 {calc.past3MonthsOvertime > 0 && <div className="flex justify-between text-gray-500"><span>└ 시간외/기타 (직접입력)</span><span>{formatNum(calc.past3MonthsOvertime)} 원</span></div>}
               </div>
               <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus)} 원</span></div>
@@ -820,32 +821,6 @@
                     </div>
                     
                     <div className="p-5 space-y-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-3 flex justify-between items-end">
-                          <span>가족수당</span>
-                          <span className="text-purple-700 font-bold bg-purple-50 px-2 py-1 rounded">+ {formatNum(calc.familyAllowanceAmount)}원</span>
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <label className="flex items-center p-2 border border-gray-200 rounded-md cursor-pointer hover:bg-gray-50 bg-white">
-                            <input type="checkbox" checked={familySpouse} onChange={(e) => setFamilySpouse(e.target.checked)} className="w-4 h-4 text-purple-600 focus:ring-purple-500 rounded" />
-                            <span className="ml-2 text-sm text-gray-700">배우자 (4만원)</span>
-                          </label>
-                          <div className="flex items-center p-2 border border-gray-200 rounded-md bg-white">
-                            <span className="text-sm text-gray-700 mr-2 flex-1">자녀 수</span>
-                            <select value={familyChildren} onChange={(e) => setFamilyChildren(Number(e.target.value))} className="w-16 px-1 py-1 border border-gray-300 rounded focus:ring-purple-500 text-sm">
-                              <option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option><option value={3}>3명</option><option value={4}>4명</option>
-                            </select>
-                          </div>
-                          <div className="flex items-center p-2 border border-gray-200 rounded-md bg-white">
-                            <span className="text-sm text-gray-700 mr-2 flex-1" title="그 외 부양가족">그 외 (2만)</span>
-                            <select value={familyOthers} onChange={(e) => setFamilyOthers(Number(e.target.value))} className="w-16 px-1 py-1 border border-gray-300 rounded focus:ring-purple-500 text-sm">
-                              <option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option><option value={3}>3명</option><option value={4}>4명</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="h-px bg-gray-100"></div>
 
                       <div className={`grid grid-cols-1 ${!isTeacher ? 'md:grid-cols-2' : ''} gap-4`}>
                         <div>
