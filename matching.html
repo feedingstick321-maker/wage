@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신용카드지출부-이용대금명세서 자동 매칭 시스템</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- SheetJS for Excel/CSV processing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // 아이콘 컴포넌트
+        const UploadIcon = () => (
+            <svg className="w-12 h-12 mx-auto text-indigo-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+        );
+        const DownloadIcon = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+        );
+
+        function App() {
+            const [ledgerData, setLedgerData] = useState(null);
+            const [statementData, setStatementData] = useState(null);
+            const [ledgerFileName, setLedgerFileName] = useState('');
+            const [statementFileName, setStatementFileName] = useState('');
+            const [results, setResults] = useState(null);
+            const [activeTab, setActiveTab] = useState('unLedger');
+
+            // 금액 정제
+            const cleanAmount = (val) => {
+                if (val === undefined || val === null || val === '') return 0;
+                if (typeof val === 'number') return val;
+                const strVal = String(val).replace(/,/g, '').replace(/원/g, '').trim();
+                const parsed = parseInt(strVal, 10);
+                return isNaN(parsed) ? 0 : parsed;
+            };
+
+            // 날짜 정제
+            const cleanDate = (val) => {
+                if (!val) return null;
+                let strVal = String(val).trim().replace(/[\.\/]/g, '-');
+                // 20XX-XX-XX 형식 추출하여 날짜가 아닌 소계/총계 행을 정확히 걸러냅니다.
+                const match = strVal.match(/(20\d{2})-(\d{1,2})-(\d{1,2})/);
+                if (match) {
+                    return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+                }
+                return null;
+            };
+
+            // 지출부 파싱
+            const processLedger = (data) => {
+                let headerRowIdx = -1;
+                let headers = [];
+                // 넉넉하게 50번째 줄까지 탐색
+                for(let i=0; i<Math.min(50, data.length); i++) {
+                    const row = data[i] || [];
+                    const rowStr = row.join('').replace(/\s/g, '');
+                    if (rowStr.includes('사용일자') && (rowStr.includes('사용금액') || rowStr.includes('금액'))) {
+                        headerRowIdx = i;
+                        headers = row;
+                        break;
+                    }
+                }
+                if (headerRowIdx === -1) throw new Error("지출부에서 '사용일자', '사용금액' 헤더를 찾을 수 없습니다.");
+
+                const dateIdx = headers.findIndex(h => h && String(h).replace(/\s/g, '').includes('사용일자'));
+                const amtIdx = headers.findIndex(h => h && String(h).replace(/\s/g, '').includes('사용금액'));
+                const merchantIdx = headers.findIndex(h => h && String(h).replace(/\s/g, '').includes('사용업체명'));
+
+                const records = [];
+                for (let i = headerRowIdx + 1; i < data.length; i++) {
+                    const row = data[i];
+                    if (!row || row.length === 0) continue;
+                    const date = cleanDate(row[dateIdx]);
+                    const amt = cleanAmount(row[amtIdx]);
+                    // date가 정상적으로 파싱된 경우만 추가
+                    if (date && amt > 0) {
+                        records.push({
+                            '사용일자': date,
+                            '사용금액': amt,
+                            '사용업체명': merchantIdx >= 0 && row[merchantIdx] ? row[merchantIdx] : '알수없음'
+                        });
+                    }
+                }
+                return records;
+            };
+
+            // 명세서 파싱
+            const processStatement = (data) => {
+                let headerRowIdx = -1;
+                let headers = [];
+                // 명세서는 상단 안내문구가 길 수 있으므로 100번째 줄까지 넉넉하게 탐색
+                for(let i=0; i<Math.min(100, data.length); i++) {
+                    const row = data[i] || [];
+                    const rowStr = row.join('').replace(/\s/g, '');
+                    if (rowStr.includes('이용일자') && (rowStr.includes('가맹점') || rowStr.includes('청구원금') || rowStr.includes('이용금액'))) {
+                        headerRowIdx = i;
+                        headers = row;
+                        break;
+                    }
+                }
+                if (headerRowIdx === -1) throw new Error("명세서에서 '이용일자' 헤더를 찾을 수 없습니다.");
+
+                const dateIdx = headers.findIndex(h => h && String(h).replace(/\s/g, '').includes('이용일자'));
+                
+                // '청구원금'을 최우선으로 찾도록 수정
+                let amtIdx = headers.findIndex(h => h && String(h).replace(/\s/g, '').includes('청구원금'));
+                if (amtIdx === -1) {
+                    amtIdx = headers.findIndex(h => h && ['이용금액', '결제금액', '이용금액(해외현지금액)'].some(kw => String(h).replace(/\s/g, '').includes(kw)));
+                }
+                if (amtIdx === -1) throw new Error("명세서에서 '청구원금' 또는 금액 관련 헤더를 찾을 수 없습니다.");
+
+                const merchantIdx = headers.findIndex(h => h && ['이용가맹점', '가맹점명', '가맹점'].some(kw => String(h).replace(/\s/g, '').includes(kw)));
+
+                const records = [];
+                for (let i = headerRowIdx + 1; i < data.length; i++) {
+                    const row = data[i];
+                    if (!row || row.length === 0) continue;
+                    
+                    const dateRaw = row[dateIdx];
+                    const date = cleanDate(dateRaw);
+                    
+                    // 날짜(20XX-XX-XX)가 정상적으로 인식된 행만 처리 (소계/총계 행 자동 제외)
+                    if (date) {
+                        const amt = cleanAmount(row[amtIdx]);
+                        if (amt > 0) {
+                            records.push({
+                                '이용일자': date,
+                                '청구원금': amt,
+                                '가맹점명': merchantIdx >= 0 && row[merchantIdx] ? row[merchantIdx] : '알수없음'
+                            });
+                        }
+                    }
+                }
+                return records;
+            };
+
+            // 파일 업로드 핸들러
+            const handleFileUpload = (e, type) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = evt.target.result;
+                        const workbook = XLSX.read(data, { type: 'array', raw: false });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+                        
+                        if (type === 'ledger') {
+                            const parsed = processLedger(jsonData);
+                            setLedgerData(parsed);
+                            setLedgerFileName(file.name);
+                        } else {
+                            const parsed = processStatement(jsonData);
+                            setStatementData(parsed);
+                            setStatementFileName(file.name);
+                        }
+                        // 새로운 파일이 올라오면 결과 초기화
+                        setResults(null);
+                    } catch (error) {
+                        console.error(error);
+                        alert(`파일 분석 중 오류가 발생했습니다.\n형식이 맞는지 확인해주세요. (${error.message})`);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+
+            // 매칭 로직
+            const runMatching = () => {
+                if (!ledgerData || !statementData) return;
+
+                const matched = [];
+                const unLedger = [];
+                let stmtPool = [...statementData];
+
+                ledgerData.forEach(l_row => {
+                    const l_date = l_row['사용일자'];
+                    const l_amt = l_row['사용금액'];
+                    const l_merchant = l_row['사용업체명'] || '';
+
+                    let matchFound = false;
+                    for (let i = 0; i < stmtPool.length; i++) {
+                        const s_row = stmtPool[i];
+                        if (s_row['이용일자'] === l_date && s_row['청구원금'] === l_amt) {
+                            matched.push({
+                                '결제일자': l_date,
+                                '결제금액': l_amt,
+                                '지출부_업체명': l_merchant,
+                                '명세서_가맹점명': s_row['가맹점명'] || '',
+                                '상태': '정상 매칭'
+                            });
+                            stmtPool.splice(i, 1);
+                            matchFound = true;
+                            break;
+                        }
+                    }
+                    if (!matchFound) {
+                        unLedger.push(l_row);
+                    }
+                });
+
+                setResults({ matched, unLedger, unStmt: stmtPool });
+                // 결과 나오면 누락 탭부터 보여줌
+                if (unLedger.length > 0) setActiveTab('unLedger');
+                else if (stmtPool.length > 0) setActiveTab('unStmt');
+                else setActiveTab('matched');
+            };
+
+            // 엑셀 다운로드
+            const exportToExcel = () => {
+                if (!results) return;
+                const wb = XLSX.utils.book_new();
+
+                const wsUnLedger = XLSX.utils.json_to_sheet(results.unLedger.length > 0 ? results.unLedger : [{'결과': '불일치 내역 없음'}]);
+                XLSX.utils.book_append_sheet(wb, wsUnLedger, "지출부에만_있음(명세서누락)");
+
+                const formattedUnStmt = results.unStmt.map(r => ({
+                    '사용일자': r['이용일자'],
+                    '명세서_가맹점명': r['가맹점명'],
+                    '누락금액(청구원금)': r['청구원금']
+                }));
+                const wsUnStmt = XLSX.utils.json_to_sheet(formattedUnStmt.length > 0 ? formattedUnStmt : [{'결과': '불일치 내역 없음'}]);
+                XLSX.utils.book_append_sheet(wb, wsUnStmt, "명세서에만_있음(지출부누락)");
+
+                const wsMatched = XLSX.utils.json_to_sheet(results.matched.length > 0 ? results.matched : [{'결과': '매칭 내역 없음'}]);
+                XLSX.utils.book_append_sheet(wb, wsMatched, "정상_매칭건");
+
+                XLSX.writeFile(wb, "대사결과_리포트.xlsx");
+            };
+
+            // 테이블 렌더링
+            const renderTable = () => {
+                if (!results) return null;
+                
+                let data = [];
+                let type = activeTab;
+
+                if (type === 'matched') data = results.matched;
+                else if (type === 'unLedger') data = results.unLedger;
+                else if (type === 'unStmt') data = results.unStmt;
+
+                if (data.length === 0) {
+                    return <div className="p-12 text-center text-gray-400">해당되는 내역이 없습니다.</div>;
+                }
+
+                return (
+                    <div className="overflow-x-auto custom-scrollbar max-h-96">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead className="bg-gray-50 sticky top-0 shadow-sm">
+                                {type === 'matched' && (
+                                    <tr>
+                                        <th className="px-4 py-3 text-center font-semibold text-gray-600">결제일자</th>
+                                        <th className="px-4 py-3 text-right font-semibold text-gray-600">결제금액</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-gray-600">지출부 업체명</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-gray-600">명세서 가맹점명</th>
+                                    </tr>
+                                )}
+                                {type === 'unLedger' && (
+                                    <tr>
+                                        <th className="px-4 py-3 text-center font-semibold text-red-700">사용일자</th>
+                                        <th className="px-4 py-3 text-right font-semibold text-red-700">사용금액</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-red-700">지출부 업체명</th>
+                                    </tr>
+                                )}
+                                {type === 'unStmt' && (
+                                    <tr>
+                                        <th className="px-4 py-3 text-center font-semibold text-orange-700">이용일자</th>
+                                        <th className="px-4 py-3 text-right font-semibold text-orange-700">청구원금</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-orange-700">가맹점명</th>
+                                    </tr>
+                                )}
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 bg-white">
+                                {data.map((row, i) => (
+                                    <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-4 py-3 text-center text-gray-600">{row['결제일자'] || row['사용일자'] || row['이용일자']}</td>
+                                        <td className="px-4 py-3 text-right font-medium text-gray-800">
+                                            {Number(row['결제금액'] || row['사용금액'] || row['청구원금']).toLocaleString()}원
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-700">
+                                            {row['지출부_업체명'] || row['사용업체명'] || row['가맹점명']}
+                                        </td>
+                                        {type === 'matched' && (
+                                            <td className="px-4 py-3 text-gray-500">{row['명세서_가맹점명']}</td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6">
+                    <div className="text-center mb-10">
+                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">💳 신용카드지출부-이용대금명세서 자동 매칭 시스템</h1>
+                        <p className="mt-3 text-slate-500">엑셀/CSV 파일을 업로드하면 날짜와 금액 기준으로 누락된 내역을 찾아냅니다.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        {/* 지출부 업로드 */}
+                        <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${ledgerData ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-300 bg-white hover:border-indigo-300 hover:bg-slate-50'}`}>
+                            <UploadIcon />
+                            <h3 className="text-lg font-bold text-slate-800 mt-2">1. 신용카드 지출부</h3>
+                            <p className="text-sm text-slate-500 mb-5 mt-1">사용건별 내역 파일 (Excel, CSV)</p>
+                            <input type="file" accept=".csv, .xlsx, .xls" onChange={(e) => handleFileUpload(e, 'ledger')} className="hidden" id="ledger-upload" />
+                            <label htmlFor="ledger-upload" className="cursor-pointer inline-block bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 font-medium shadow-sm transition">파일 선택</label>
+                            {ledgerFileName && <p className="mt-4 text-sm text-indigo-700 font-semibold bg-indigo-100 inline-block px-3 py-1 rounded-full">✅ {ledgerFileName} ({ledgerData?.length}건 인식됨)</p>}
+                        </div>
+
+                        {/* 명세서 업로드 */}
+                        <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${statementData ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-300 bg-white hover:border-indigo-300 hover:bg-slate-50'}`}>
+                            <UploadIcon />
+                            <h3 className="text-lg font-bold text-slate-800 mt-2">2. 이용대금명세서</h3>
+                            <p className="text-sm text-slate-500 mb-5 mt-1">카드사 청구 내역 파일 (Excel, CSV)</p>
+                            <input type="file" accept=".csv, .xlsx, .xls" onChange={(e) => handleFileUpload(e, 'statement')} className="hidden" id="stmt-upload" />
+                            <label htmlFor="stmt-upload" className="cursor-pointer inline-block bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 font-medium shadow-sm transition">파일 선택</label>
+                            {statementFileName && <p className="mt-4 text-sm text-indigo-700 font-semibold bg-indigo-100 inline-block px-3 py-1 rounded-full">✅ {statementFileName} ({statementData?.length}건 인식됨)</p>}
+                        </div>
+                    </div>
+
+                    <div className="text-center mb-10">
+                        <button 
+                            onClick={runMatching} 
+                            disabled={!ledgerData || !statementData}
+                            className={`px-10 py-4 rounded-xl font-bold text-lg shadow-md transition-all ${ledgerData && statementData ? 'bg-slate-800 text-white hover:bg-slate-900 hover:shadow-lg transform hover:-translate-y-0.5' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                        >
+                            데이터 비교·대사 시작
+                        </button>
+                    </div>
+
+                    {results && (
+                        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-[fadeIn_0.5s_ease-out]">
+                            <div className="p-6 bg-slate-800 flex justify-between items-center">
+                                <h2 className="text-xl font-bold text-white">대사 결과 요약</h2>
+                                <button onClick={exportToExcel} className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 font-semibold text-sm shadow-sm transition">
+                                    <DownloadIcon /> 결과 엑셀로 다운로드
+                                </button>
+                            </div>
+                            
+                            <div className="p-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                                    <div onClick={() => setActiveTab('unLedger')} className={`cursor-pointer rounded-xl p-5 border-2 transition-all ${activeTab === 'unLedger' ? 'border-red-400 bg-red-50' : 'border-red-100 bg-white hover:border-red-300'}`}>
+                                        <div className="text-red-600 text-sm font-bold mb-1">🚨 지출부에만 있음 (명세서 누락)</div>
+                                        <div className="text-3xl font-extrabold text-red-700">{results.unLedger.length}<span className="text-lg font-medium text-red-500 ml-1">건</span></div>
+                                    </div>
+                                    <div onClick={() => setActiveTab('unStmt')} className={`cursor-pointer rounded-xl p-5 border-2 transition-all ${activeTab === 'unStmt' ? 'border-orange-400 bg-orange-50' : 'border-orange-100 bg-white hover:border-orange-300'}`}>
+                                        <div className="text-orange-600 text-sm font-bold mb-1">⚠️ 명세서에만 있음 (지출부 누락)</div>
+                                        <div className="text-3xl font-extrabold text-orange-700">{results.unStmt.length}<span className="text-lg font-medium text-orange-500 ml-1">건</span></div>
+                                    </div>
+                                    <div onClick={() => setActiveTab('matched')} className={`cursor-pointer rounded-xl p-5 border-2 transition-all ${activeTab === 'matched' ? 'border-emerald-400 bg-emerald-50' : 'border-emerald-100 bg-white hover:border-emerald-300'}`}>
+                                        <div className="text-emerald-600 text-sm font-bold mb-1">✅ 정상 매칭 (일치)</div>
+                                        <div className="text-3xl font-extrabold text-emerald-700">{results.matched.length}<span className="text-lg font-medium text-emerald-500 ml-1">건</span></div>
+                                    </div>
+                                </div>
+
+                                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                                    {renderTable()}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</body>
+</html>
