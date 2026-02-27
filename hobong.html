@@ -1,0 +1,1135 @@
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기간제교원 호봉(재)획정 계산기 및 조서 자동작성기by손셀파</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans KR',sans-serif;background:#f3f4f6;color:#1f2937;min-height:100vh}
+
+  /* ── Header ── */
+  header{background:linear-gradient(135deg,#1a3a6b 0%,#2563b0 100%);color:#fff;padding:20px 24px;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+  .header-inner{max-width:900px;margin:0 auto}
+  .header-tag{font-size:11px;letter-spacing:3px;color:#93c5fd;text-transform:uppercase;margin-bottom:4px}
+  header h1{font-size:22px;font-weight:900;letter-spacing:-0.5px}
+  header p{font-size:12px;color:#93c5fd;margin-top:4px}
+
+  /* ── Steps ── */
+  .steps-bar{background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 24px}
+  .steps-inner{max-width:900px;margin:0 auto;display:flex;gap:4px;align-items:center}
+  .step-btn{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:600;color:#9ca3af;transition:all .2s;font-family:inherit}
+  .step-btn.active{background:#1a3a6b;color:#fff}
+  .step-btn .num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#e5e7eb;color:#9ca3af;flex-shrink:0}
+  .step-btn.active .num{background:#fff;color:#1a3a6b}
+  .step-btn.done .num{background:#22c55e;color:#fff}
+  .step-sep{width:28px;height:1px;background:#e5e7eb}
+
+  /* ── Main ── */
+  main{max-width:900px;margin:0 auto;padding:28px 24px}
+
+  /* ── Cards ── */
+  .card{background:#fff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;margin-bottom:20px}
+  .card-head{padding:12px 20px;border-bottom:1px solid #f3f4f6;background:#fafafa;font-size:13px;font-weight:700;color:#374151}
+  .card-body{padding:20px}
+
+  /* ── Fields ── */
+  .field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#6b7280;margin-bottom:5px}
+  input[type=text],input[type=date],select{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s;background:#fff;color:#1f2937}
+  input[type=text]:focus,input[type=date]:focus,select:focus{border-color:#2563b0;box-shadow:0 0 0 3px rgba(37,99,176,.12)}
+  input.error{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+  select{cursor:pointer}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+
+  /* ── Radio Cards ── */
+  .radio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+  .radio-card{cursor:pointer;border:2px solid #e5e7eb;border-radius:12px;padding:12px;transition:all .15s}
+  .radio-card:hover{border-color:#93c5fd;background:#f0f7ff}
+  .radio-card.selected{border-color:#1a3a6b;background:#eff6ff}
+  .radio-card .rc-label{font-size:13px;font-weight:600;color:#374151}
+  .radio-card.selected .rc-label{color:#1a3a6b}
+  .radio-card .rc-sub{font-size:11px;color:#9ca3af;margin-top:3px}
+  .radio-dot{width:16px;height:16px;border-radius:50%;border:2px solid #d1d5db;margin-right:8px;flex-shrink:0;display:inline-block;vertical-align:middle;transition:all .15s}
+  .radio-card.selected .radio-dot{border-color:#1a3a6b;background:#1a3a6b;box-shadow:inset 0 0 0 3px #fff}
+
+  /* ── Check Cards ── */
+  .check-card{cursor:pointer;border:2px solid #e5e7eb;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:all .15s;margin-bottom:8px}
+  .check-card:hover{border-color:#93c5fd}
+  .check-card.checked{border-color:#1a3a6b;background:#eff6ff}
+  .check-card input[type=checkbox]{width:17px;height:17px;margin-top:2px;accent-color:#1a3a6b;flex-shrink:0}
+  .check-card .cc-label{font-size:13px;font-weight:600;color:#374151}
+  .check-card.checked .cc-label{color:#1a3a6b}
+  .check-card .cc-desc{font-size:11px;color:#9ca3af;margin-top:3px}
+
+  /* ── Career Items ── */
+  .career-item{border:1.5px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:12px;background:#fff;transition:border-color .2s}
+  .career-item:hover{border-color:#93c5fd}
+  .career-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .career-num{font-size:13px;font-weight:700;color:#4b5563}
+  .btn-del{background:transparent;border:none;cursor:pointer;color:#f87171;font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;transition:all .15s;font-family:inherit}
+  .btn-del:hover{background:#fef2f2;color:#dc2626}
+  .btn-add{width:100%;padding:13px;border:2px dashed #2563b0;background:transparent;border-radius:12px;color:#2563b0;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:4px}
+  .btn-add:hover{background:#eff6ff}
+
+  /* ── Date Input with mask ── */
+  .date-wrap{position:relative}
+  .date-input{font-family:'Courier New',monospace;font-size:14px;letter-spacing:1px}
+  .date-hint{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:#d1d5db;pointer-events:none}
+  .date-input.valid{border-color:#22c55e}
+
+  /* ── Preview Box ── */
+  .preview-box{padding:12px 14px;border-radius:10px;border:1.5px solid;margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}
+  .preview-box .pb-label{font-size:10px;opacity:.65;margin-bottom:3px}
+  .preview-box .pb-val{font-size:14px;font-weight:700}
+  .preview-hidden{display:none}
+
+  /* ── Info Box ── */
+  .info-box{padding:12px 14px;border-radius:10px;border:1.5px solid;margin-bottom:14px;font-size:12px;line-height:1.7}
+  .info-box.blue{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+  .info-box.amber{background:#fffbeb;border-color:#fde68a;color:#92400e}
+
+  /* ── Buttons ── */
+  .btn-primary{background:#1a3a6b;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 2px 8px rgba(26,58,107,.3)}
+  .btn-primary:hover{background:#2563b0;box-shadow:0 4px 14px rgba(37,99,176,.4)}
+  .btn-secondary{background:#fff;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+  .btn-secondary:hover{background:#f9fafb;border-color:#d1d5db}
+  .btn-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px}
+
+  /* ── Total Summary ── */
+  .total-bar{background:linear-gradient(135deg,#1a3a6b,#2563b0);color:#fff;border-radius:14px;padding:16px 20px;margin-bottom:16px}
+  .total-bar .tl{font-size:11px;color:#93c5fd;margin-bottom:3px}
+  .total-bar .tv{font-size:24px;font-weight:900}
+  .total-bar .ts{font-size:12px;color:#93c5fd;margin-top:4px}
+
+  /* ── Result ── */
+  .result-hero{background:linear-gradient(135deg,#1a3a6b 0%,#2563b0 100%);color:#fff;border-radius:20px;padding:28px;margin-bottom:20px;box-shadow:0 8px 24px rgba(26,58,107,.3)}
+  .result-hero-inner{display:flex;justify-content:space-between;align-items:flex-start}
+  .result-name{font-size:26px;font-weight:900;margin-bottom:4px}
+  .result-sub{font-size:12px;color:#93c5fd}
+  .result-grade{text-align:right}
+  .result-grade-label{font-size:12px;color:#93c5fd;margin-bottom:2px}
+  .result-grade-num{font-size:64px;font-weight:900;line-height:1}
+  .result-grade-unit{font-size:16px;color:#93c5fd;margin-top:4px}
+  .remain-bar{background:rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;margin-top:16px;font-size:13px}
+  .remain-bar span{color:#dbeafe}
+  .remain-bar strong{color:#fff}
+
+  /* ── Calc Steps ── */
+  .calc-row{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;border-radius:10px;border:1.5px solid;margin-bottom:8px}
+  .calc-row .cr-label{font-size:13px;font-weight:700}
+  .calc-row .cr-sub{font-size:11px;opacity:.7;margin-top:3px}
+  .calc-row .cr-val{font-size:18px;font-weight:900;margin-left:12px;white-space:nowrap}
+  .calc-row.blue{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+  .calc-row.green{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+  .calc-row.purple{background:#faf5ff;border-color:#e9d5ff;color:#6b21a8}
+  .calc-row.amber{background:#fffbeb;border-color:#fde68a;color:#92400e}
+  .calc-total{background:#1a3a6b;color:#fff;border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .calc-total .ct-eq{font-size:12px;color:#93c5fd}
+  .calc-total .ct-num{font-size:32px;font-weight:900}
+
+  /* ── Detail Table (Screen) ── */
+  .screen-table {width:100%;border-collapse:collapse;font-size:13px}
+  .screen-table th{background:#f9fafb;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;border-bottom:1.5px solid #e5e7eb}
+  .screen-table td{padding:9px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
+  .screen-table tr:hover td{background:#fafafa}
+  .td-sum{font-weight:700;color:#1a3a6b;background:#eff6ff!important}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:#e5e7eb;color:#374151;font-family:'Courier New',monospace}
+
+  @media(max-width:600px){.grid3{grid-template-columns:1fr}.grid4{grid-template-columns:1fr 1fr}.result-hero-inner{flex-direction:column;gap:16px}.result-grade{text-align:left}}
+  @media(max-width:400px){.grid4{grid-template-columns:1fr}}
+
+  /* Custom Modal Styles */
+  #customModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center; }
+  #customModal.show { display:flex; }
+  .modal-content { background:#fff; padding:24px; border-radius:16px; width:90%; max-width:360px; box-shadow:0 10px 25px rgba(0,0,0,0.1); }
+  .modal-text { font-size:14px; color:#374151; margin-bottom:24px; white-space:pre-wrap; line-height:1.5; font-weight:500;}
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; }
+  .modal-actions button { padding:8px 16px; font-size:13px; border-radius:8px; border:none; cursor:pointer; font-weight:600;}
+
+  /* ── Print Preview Mode (Screen) ── */
+  body.print-preview-mode { background: #e5e7eb; padding-top: 60px; }
+  body.print-preview-mode header,
+  body.print-preview-mode .steps-bar,
+  body.print-preview-mode .screen-only,
+  body.print-preview-mode footer { display: none !important; }
+  
+  body.print-preview-mode #printArea { 
+    display: block !important; 
+    background: #fff; 
+    max-width: 297mm; 
+    margin: 20px auto; 
+    padding: 15mm; 
+    box-shadow: 0 10px 25px rgba(0,0,0,.15); 
+  }
+  
+  #printToolbar {
+    display: none;
+    position: fixed; top: 0; left: 0; width: 100%;
+    background: #1f2937; color: #fff; padding: 12px 24px;
+    justify-content: space-between; align-items: center; z-index: 10000;
+    box-shadow: 0 4px 6px rgba(0,0,0,.2);
+  }
+  #printToolbar .pt-msg { font-size: 14px; }
+  #printToolbar .pt-actions { display: flex; gap: 8px; }
+  #printToolbar button { padding: 8px 16px; font-size: 13px; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; transition: background .2s; }
+  .pt-btn-print { background: #2563b0; color: #fff; }
+  .pt-btn-print:hover { background: #1d4ed8; }
+  .pt-btn-close { background: #4b5563; color: #fff; }
+  .pt-btn-close:hover { background: #374151; }
+  body.print-preview-mode #printToolbar { display: flex; }
+
+  /* ── Print Styles (Excel Format) ── */
+  #printArea { display: none; background: #fff; color: #000; }
+  @media print {
+    body { background: #fff; margin: 0; padding: 0; color: #000; }
+    header, .steps-bar, footer, .btn-row, .info-box, .card, .result-hero, #printToolbar { display: none !important; }
+    .screen-only { display: none !important; }
+    main { padding: 0; max-width: 100%; }
+    #printArea { display: block !important; padding: 10px; box-shadow: none; margin: 0; max-width: none; }
+    @page { margin: 15mm; size: A4 landscape; }
+  }
+  .print-title { text-align: center; font-size: 26px; font-weight: 900; margin-bottom: 24px; letter-spacing: 4px; }
+  .formal-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; border: 2px solid #000; font-family: 'Malgun Gothic', 'Noto Sans KR', sans-serif;}
+  .formal-table th, .formal-table td { border: 1px solid #000; padding: 8px 6px; text-align: center; vertical-align: middle; color: #000;}
+  .formal-table th { background: #f4f4f4; font-weight: 700; }
+  .formal-table .txt-left { text-align: left; padding-left: 10px; }
+  .print-footer { margin-top: 30px; text-align: right; font-size: 15px; }
+  .print-footer p { margin-bottom: 8px; }
+  .print-sign { font-size: 16px; font-weight: bold; margin-top: 15px;}
+</style>
+</head>
+<body>
+
+<!-- Print Toolbar (Screen Preview Mode) -->
+<div id="printToolbar" class="no-print">
+  <div class="pt-msg">💡 브라우저 메뉴에서 <strong>인쇄(Ctrl+P 또는 Cmd+P)</strong>를 눌러 인쇄하세요. (가로 방향 권장)</div>
+  <div class="pt-actions">
+    <button class="pt-btn-print" onclick="window.print()">인쇄 시도</button>
+    <button class="pt-btn-close" onclick="closePrintView()">돌아가기</button>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-inner">
+    <div class="header-tag">교육부 예규 제97호 기반</div>
+    <h1>📋 기간제교원 호봉(재)획정 계산기 및 조서 자동작성기by손셀파</h1>
+    <p>「공무원보수규정」 별표22·23·25 / 교육공무원 경력환산율표 적용 예규</p>
+  </div>
+</header>
+
+<!-- Steps -->
+<div class="steps-bar no-print">
+  <div class="steps-inner">
+    <button class="step-btn active" id="stepBtn1" onclick="goStep(1)"><span class="num" id="stepNum1">1</span>기본정보 입력</button>
+    <div class="step-sep"></div>
+    <button class="step-btn" id="stepBtn2" onclick="goStep(2)"><span class="num" id="stepNum2">2</span>경력사항 입력</button>
+    <div class="step-sep"></div>
+    <button class="step-btn" id="stepBtn3" onclick="goStep(3)"><span class="num" id="stepNum3">3</span>호봉획정 결과</button>
+  </div>
+</div>
+
+<main>
+  <!-- ════ STEP 1 ════ -->
+  <div id="step1" class="screen-only">
+    <!-- 기본 인적사항 및 출력 정보 -->
+    <div class="card">
+      <div class="card-head">👤 기본 인적사항 및 조서 출력 정보</div>
+      <div class="card-body">
+        <div class="grid3" style="margin-bottom: 14px;">
+          <div class="field">
+            <label>성명</label>
+            <input type="text" id="name" placeholder="예: 홍길동">
+          </div>
+          <div class="field">
+            <label>임용(시작)일 (호봉획정일)</label>
+            <div class="date-wrap">
+              <input type="text" id="hireDate" class="date-input" placeholder="YYYY-MM-DD" maxlength="10" oninput="maskDate(this)" onblur="validateDate(this)">
+              <span class="date-hint">예: 2025-03-01</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>출력용 학력 (조서 표기용)</label>
+            <input type="text" id="eduText" placeholder="예: 한국대학교 윤리학과">
+          </div>
+        </div>
+        <div class="grid4">
+          <div class="field">
+            <label>소속 기관 (조서 표기용)</label>
+            <input type="text" id="affiliation" placeholder="예: 한국고등학교">
+          </div>
+          <div class="field">
+            <label>직위/직급 (조서 표기용)</label>
+            <input type="text" id="position" placeholder="예: 교사">
+          </div>
+          <div class="field">
+            <label>작성자 이름</label>
+            <input type="text" id="author" placeholder="예: 박담당">
+          </div>
+          <div class="field">
+            <label>작성자 직급</label>
+            <input type="text" id="authorRank" placeholder="예: 교육행정8급">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 교원자격증 -->
+    <div class="card">
+      <div class="card-head">🎓 교원자격증 (기산호봉 결정)</div>
+      <div class="card-body">
+        <div class="radio-grid" id="qualGrid"></div>
+      </div>
+    </div>
+
+    <!-- 최종 학력 -->
+    <div class="card">
+      <div class="card-head">📚 최종 학력 (학령 계산)</div>
+      <div class="card-body">
+        <div class="radio-grid" id="eduGrid"></div>
+      </div>
+    </div>
+
+    <!-- 가산연수 -->
+    <div class="card">
+      <div class="card-head">➕ 가산연수 해당 여부</div>
+      <div class="card-body">
+        <label class="check-card" id="ccSabeom">
+          <input type="checkbox" id="isSabeom" onchange="renderBonusInfo()">
+          <div>
+            <div class="cc-label">사범계학교(대학에 설치된 교육계학과 포함) 졸업자</div>
+            <div class="cc-desc">수학연한 2년 이상의 사범계 학교 졸업 시 +1년 (특수교 해당자는 +2년 적용)</div>
+          </div>
+        </label>
+        <label class="check-card" id="ccSpecial">
+          <input type="checkbox" id="isSpecial" onchange="renderBonusInfo()">
+          <div>
+            <div class="cc-label">특수학교(특수학급) 또는 특수교육지원센터 근무 교원</div>
+            <div class="cc-desc">사범계 졸업자: +2년 / 비사범계 졸업자: +1년</div>
+          </div>
+        </label>
+        <div id="bonusInfo"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <div></div>
+      <button class="btn-primary" onclick="toStep2()">다음: 경력사항 입력 →</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 2 ════ -->
+  <div id="step2" class="screen-only" style="display:none">
+    <div class="card">
+      <div class="card-head">📂 경력사항 입력</div>
+      <div class="card-body">
+        <div class="info-box blue">
+          <strong>⚠ 기간 계산 원칙</strong><br>
+          • 시작일과 종료일은 모두 <strong>포함</strong>되어 계산됩니다.<br>
+          • 날짜는 <strong>YYYY-MM-DD 형식으로 타이핑</strong> 입력 (예: 2020-03-01) · 환산율 적용 후 소수점 이하 절사
+        </div>
+        <div id="careerList"></div>
+        <button class="btn-add" onclick="addCareer()">+ 경력 추가</button>
+      </div>
+    </div>
+
+    <div id="totalBar" class="total-bar" style="display:none">
+      <div class="tl">현재 환산경력 합계 (소수점 이하 절사 적용)</div>
+      <div class="tv" id="totalVal">—</div>
+      <div class="ts" id="totalSub"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goStep(1)">← 이전</button>
+      <button class="btn-primary" id="btnStep3" onclick="toStep3()">호봉획정 결과 보기 →</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 3 (Screen Result) ════ -->
+  <div id="step3" style="display:none">
+    <div class="screen-only">
+      <div class="result-hero">
+        <div class="result-hero-inner">
+          <div>
+            <div class="result-sub">최종 산정 결과 · <span id="rHireDate"></span></div>
+            <div class="result-name" id="rName">—</div>
+            <div class="result-sub" id="rQual"></div>
+          </div>
+          <div class="result-grade">
+            <div class="result-grade-label">초임호봉</div>
+            <div class="result-grade-num" id="rGradeNum">—</div>
+            <div class="result-grade-unit">호봉</div>
+          </div>
+        </div>
+        <div class="remain-bar" id="rRemain" style="display:none">
+          <span>⏱ 잔여기간 (다음 호봉승급 기산일 반영): </span><strong id="rRemainVal"></strong>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">📊 호봉 산정 계산과정</div>
+        <div class="card-body" id="calcProcess"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">📋 경력 환산 상세내역 (화면용 요약)</div>
+        <div class="card-body" style="overflow-x:auto">
+          <table class="screen-table">
+            <thead>
+              <tr>
+                <th>경력 내용(종류)</th>
+                <th>근무기간</th>
+                <th style="text-align:center">원경력기간</th>
+                <th style="text-align:center">환산율</th>
+                <th style="text-align:center">환산경력</th>
+              </tr>
+            </thead>
+            <tbody id="careerTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="info-box amber" style="margin-bottom:8px">
+        <strong>⚠ 출력 안내</strong><br>
+        하단의 [🖨 인쇄] 버튼을 누르시면, <strong>기산호봉, 잔여월수, 차기승급일 등 모든 정보가 포함된 조서 양식</strong>으로 자동 변환되어 출력됩니다.
+      </div>
+
+      <div class="btn-row no-print">
+        <button class="btn-secondary" onclick="goStep(2)">← 경력 수정</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" onclick="resetAll()">🔄 새로 계산</button>
+          <button class="btn-primary" onclick="openPrintView()">🖨 인쇄 (조서 서식)</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ════ Print Area (Excel Format) ════ -->
+    <div id="printArea">
+      <div class="print-title">호봉 획정(재획정) 조서</div>
+      
+      <table class="formal-table">
+        <tr>
+          <th width="15%">소 속</th>
+          <td width="35%" id="pAffiliation"></td>
+          <th width="15%">직 위</th>
+          <td width="35%" id="pPosition"></td>
+        </tr>
+        <tr>
+          <th>성 명</th>
+          <td id="pName"></td>
+          <th>교사(자격)</th>
+          <td id="pQual"></td>
+        </tr>
+        <tr>
+          <th>학 력</th>
+          <td id="pEduText"></td>
+          <th>현 호 봉</th>
+          <td id="pGrade"></td>
+        </tr>
+      </table>
+
+      <table class="formal-table">
+        <thead>
+          <tr>
+            <th rowspan="2" width="22%">경 력 내 용</th>
+            <th colspan="3">경력시작일</th>
+            <th colspan="3">경력종료일</th>
+            <th rowspan="2" width="8%">환산율<br>(%)</th>
+            <th colspan="3">환산년수</th>
+            <th rowspan="2" width="10%">비고</th>
+          </tr>
+          <tr>
+            <th width="5%">년</th><th width="4%">월</th><th width="4%">일</th>
+            <th width="5%">년</th><th width="4%">월</th><th width="4%">일</th>
+            <th width="5%">년</th><th width="4%">월</th><th width="4%">일</th>
+          </tr>
+        </thead>
+        <tbody id="pCareerBody">
+          <!-- JS 렌더링 영역 -->
+        </tbody>
+      </table>
+
+      <!-- 조서 하단 요약표 (기산호봉, 학령, 가산연수, 잔여월수, 호봉, 차기승급일) -->
+      <table class="formal-table" style="margin-top: -10px;">
+        <tr style="background:#f4f4f4;">
+          <th width="16.6%">기산호봉</th>
+          <th width="16.6%">학 령</th>
+          <th width="16.6%">가산연수</th>
+          <th width="16.6%">잔여월수</th>
+          <th width="16.6%">호 봉</th>
+          <th width="16.6%">차기승급일</th>
+        </tr>
+        <tr style="font-weight:700;">
+          <td id="pBaseGrade"></td>
+          <td id="pEduYears"></td>
+          <td id="pBonusYears"></td>
+          <td id="pRemain"></td>
+          <td id="pFinalGrade"></td>
+          <td id="pNextPromo" style="color:#1d4ed8;"></td>
+        </tr>
+      </table>
+
+      <div class="print-footer">
+        <p>위와 같이 호봉을 획정(재획정)함.</p>
+        <p id="pPrintDate"></p>
+        <div class="print-sign">
+          작성자 : <span id="pAuthorRank"></span> &nbsp;<span id="pAuthor"></span> &nbsp;(인)
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="no-print" style="text-align:center;color:#9ca3af;font-size:11px;padding:24px;border-top:1px solid #e5e7eb;margin-top:16px">
+  교육부 예규 제97호 · 공무원보수규정 별표22·23·25 기반 | 최종 호봉은 호봉경력 평가 심의회를 통해 확정됩니다
+</footer>
+
+<!-- Custom Modal for Alerts and Confirms -->
+<div id="customModal" class="no-print">
+  <div class="modal-content">
+    <div id="modalText" class="modal-text"></div>
+    <div class="modal-actions">
+      <button id="modalBtnCancel" class="btn-secondary" style="display:none; color: #6b7280; background: #f3f4f6;">취소</button>
+      <button id="modalBtnOk" class="btn-primary" style="background: #1a3a6b; color: #fff;">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// Custom Modal Logic
+// ══════════════════════════════════════════════════════
+function showAlert(msg) {
+  document.getElementById("modalText").textContent = msg;
+  document.getElementById("modalBtnCancel").style.display = "none";
+  const modal = document.getElementById("customModal");
+  modal.classList.add("show");
+  document.getElementById("modalBtnOk").onclick = () => modal.classList.remove("show");
+}
+
+function showConfirm(msg, onConfirm) {
+  document.getElementById("modalText").textContent = msg;
+  document.getElementById("modalBtnCancel").style.display = "block";
+  const modal = document.getElementById("customModal");
+  modal.classList.add("show");
+  document.getElementById("modalBtnCancel").onclick = () => modal.classList.remove("show");
+  document.getElementById("modalBtnOk").onclick = () => {
+    modal.classList.remove("show");
+    if(onConfirm) onConfirm();
+  };
+}
+
+// ══════════════════════════════════════════════════════
+// 데이터 상수
+// ══════════════════════════════════════════════════════
+const QUALS = [
+  {id:"정교사1급", label:"정교사(1급)",       base:9},
+  {id:"정교사2급", label:"정교사(2급)",       base:8},
+  {id:"준교사",   label:"준교사",             base:5},
+  {id:"전문상담교사1급", label:"전문상담교사(1급)", base:9},
+  {id:"전문상담교사2급", label:"전문상담교사(2급)", base:8},
+  {id:"사서교사1급", label:"사서교사(1급)",   base:9},
+  {id:"사서교사2급", label:"사서교사(2급)",   base:8},
+  {id:"실기교사",  label:"실기교사",           base:5},
+  {id:"보건교사1급", label:"보건교사(1급)",   base:9},
+  {id:"보건교사2급", label:"보건교사(2급)",   base:8},
+  {id:"영양교사1급", label:"영양교사(1급)",   base:9},
+  {id:"영양교사2급", label:"영양교사(2급)",   base:8},
+];
+const EDUS = [
+  {id:"uni4", label:"4년제 일반대학 졸업",                  total:16},
+  {id:"edu4", label:"교육대학 졸업 (4년)",                  total:16},
+  {id:"uni6", label:"6년제 대학 졸업 (의대·치대·한의대·수의대)", total:18},
+  {id:"col3", label:"전문대학 졸업 3년 (간호·방사선·물리치료 등)", total:15},
+  {id:"col2", label:"전문대학 졸업 2년",                    total:14},
+  {id:"high", label:"고등학교 졸업 (대학 미진학)",           total:12},
+];
+const CAREER_TYPES = [
+  // 교원경력
+  {id:"pub10",   label:"국·공립학교 교원 (기간제 포함, 자격 일치)",    rate:1.0, group:"① 교원경력"},
+  {id:"priv10",  label:"사립학교 교원 (관할청 보고, 자격 일치)",        rate:1.0, group:"① 교원경력"},
+  {id:"mis8",    label:"기간제교원 자격-학교급 불일치 (예:중등→초등)",   rate:0.8, group:"① 교원경력"},
+  {id:"unrep5",  label:"사립학교 교원 (관할청 미보고)",                 rate:0.5, group:"① 교원경력"},
+  {id:"dc10",    label:"어린이집 교원 (유치원 자격 보유)",               rate:1.0, group:"① 교원경력"},
+  {id:"dis8",    label:"장애영유아어린이집 교원 (특수교원 자격)",         rate:0.8, group:"① 교원경력"},
+  {id:"life10",  label:"학교형태 평생교육시설 교원",                    rate:1.0, group:"① 교원경력"},
+  {id:"kor10",   label:"한국학교 교원 (재외국민 교육지원법)",            rate:1.0, group:"① 교원경력"},
+  // 공무원경력
+  {id:"gov10",   label:"국가·지방공무원 (현역 군복무 포함)",            rate:1.0, group:"② 공무원경력"},
+  {id:"emp8",    label:"고용직 공무원",                                 rate:0.8, group:"② 공무원경력"},
+  // 유사경력-강사
+  {id:"sf10",    label:"유·초·중등 강사 (전일제, 1일 8시간↑)",          rate:1.0, group:"③ 유사경력 – 강사"},
+  {id:"st3",     label:"유·초·중등 강사 (시간제, 주 12시간↓)",          rate:0.3, group:"③ 유사경력 – 강사"},
+  {id:"u5",      label:"대학 시간강사 (주 5시간 이하)",                  rate:0.5, group:"③ 유사경력 – 강사"},
+  {id:"u6",      label:"대학 시간강사 (주 6시간)",                      rate:0.6, group:"③ 유사경력 – 강사"},
+  {id:"u7",      label:"대학 시간강사 (주 7시간)",                      rate:0.7, group:"③ 유사경력 – 강사"},
+  {id:"u8",      label:"대학 시간강사 (주 8시간)",                      rate:0.8, group:"③ 유사경력 – 강사"},
+  {id:"u9",      label:"대학 시간강사 (주 9시간)",                      rate:0.9, group:"③ 유사경력 – 강사"},
+  {id:"u10",     label:"대학 시간강사 (주 10시간↑)",                    rate:1.0, group:"③ 유사경력 – 강사"},
+  // 유사경력-연구
+  {id:"res10",   label:"대학·정부출연연구기관 연구원",                   rate:1.0, group:"③ 유사경력 – 연구"},
+  {id:"ta10",    label:"대학원 연구전담 조교",                           rate:1.0, group:"③ 유사경력 – 연구"},
+  {id:"ms10",    label:"석사학위 취득 수학기간",                         rate:1.0, group:"③ 유사경력 – 연구"},
+  {id:"ph10",    label:"박사학위 취득 수학기간 (최대 3년)",               rate:1.0, group:"③ 유사경력 – 연구"},
+  // 유사경력-국가·지방
+  {id:"jab8",    label:"잡급직원 (잡급직원규정에 따른)",                  rate:0.8, group:"③ 유사경력 – 국가·지방기관"},
+  {id:"tmp5",    label:"임시직·촉탁·잡급 (잡급규정 시행 후, 3월↑)",      rate:0.5, group:"③ 유사경력 – 국가·지방기관"},
+  {id:"sch5",    label:"학교회계직원 (관련 교원자격 취득 전)",             rate:0.5, group:"③ 유사경력 – 국가·지방기관"},
+  {id:"sch8",    label:"학교회계직원 (관련 교원자격 취득 후)",             rate:0.8, group:"③ 유사경력 – 국가·지방기관"},
+  // 유사경력-기타
+  {id:"mil10",   label:"예술·체육요원/산업기능요원/전문연구요원 (병역법)", rate:1.0, group:"③ 유사경력 – 그 밖의 경력"},
+  {id:"pub5",    label:"공공기관 근무 (행정·경영·연구·기술분야)",          rate:0.5, group:"③ 유사경력 – 그 밖의 경력"},
+  {id:"ac5",     label:"등록 학원 강사 / 신고 교습소 교습자",              rate:0.5, group:"③ 유사경력 – 그 밖의 경력"},
+  {id:"ac3",     label:"미등록 학원 강사 (객관적 증빙 있을 때)",           rate:0.3, group:"③ 유사경력 – 그 밖의 경력"},
+  {id:"corp4",   label:"회사 (상법상 합명·합자·주식·유한회사) 근무",      rate:0.4, group:"③ 유사경력 – 그 밖의 경력"},
+  {id:"oth3",    label:"기타 (재단법인·개인회사·의료기관·정당 등)",        rate:0.3, group:"③ 유사경력 – 그 밖의 경력"},
+];
+
+// ══════════════════════════════════════════════════════
+// 상태
+// ══════════════════════════════════════════════════════
+let state = {
+  qual:"", edu:"", isSabeom:false, isSpecial:false,
+  careers:[]
+};
+let careerIdSeq = 1;
+
+// ══════════════════════════════════════════════════════
+// 날짜 마스킹
+// ══════════════════════════════════════════════════════
+function maskDate(el) {
+  let v = el.value.replace(/[^0-9]/g,"");
+  if(v.length >= 5) v = v.slice(0,4) + "-" + v.slice(4);
+  if(v.length >= 8) v = v.slice(0,7) + "-" + v.slice(7);
+  v = v.slice(0,10);
+  el.value = v;
+  el.classList.remove("valid","error");
+  if(v.length === 10 && isValidDate(v)){
+    el.classList.add("valid");
+  }
+  updateAllPreviews();
+}
+
+function validateDate(el) {
+  const v = el.value.trim();
+  el.classList.remove("valid","error");
+  if(v === "") return;
+  if(v.length === 10 && isValidDate(v)) el.classList.add("valid");
+  else el.classList.add("error");
+}
+
+function isValidDate(str) {
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const d = new Date(str);
+  return !isNaN(d.getTime()) && str === d.toISOString().slice(0,10);
+}
+
+// ══════════════════════════════════════════════════════
+// 기간 계산 유틸
+// ══════════════════════════════════════════════════════
+function calcRaw(startStr, endStr, inclEnd) {
+  if(!isValidDate(startStr) || !isValidDate(endStr)) return null;
+  let s = new Date(startStr), e = new Date(endStr);
+  if(s >= e && !inclEnd) return null;
+  if(inclEnd) e.setDate(e.getDate()+1);
+  if(s >= e) return null;
+
+  let yr = e.getFullYear()-s.getFullYear();
+  let mo = e.getMonth()-s.getMonth();
+  let da = e.getDate()-s.getDate();
+  if(da < 0){ mo--; da += new Date(e.getFullYear(), e.getMonth(), 0).getDate(); }
+  if(mo < 0){ yr--; mo += 12; }
+  return {months: yr*12+mo, days: da};
+}
+
+function applyRate(raw, rate) {
+  if(!raw) return null;
+  const mF = raw.months * rate;
+  const dF = raw.days * rate;
+  const wm = Math.floor(mF);
+  const fd = Math.floor((mF - wm)*30);
+  const wd = Math.floor(dF);
+  let td = fd + wd;
+  const am = Math.floor(td/30);
+  td = td % 30;
+  return {months: wm+am, days: td};
+}
+
+function sumPeriods(list) {
+  let mo=0, da=0;
+  for(const p of list){ mo+=p.months; da+=p.days; }
+  mo += Math.floor(da/30);
+  da = da % 30;
+  return {months:mo, days:da};
+}
+
+function fmtPeriod(months, days) {
+  if(months==null) return "—";
+  const y = Math.floor(months/12), m = months%12;
+  return [y>0&&y+"년", m>0&&m+"월", days>0&&days+"일"].filter(Boolean).join(" ") || "0일";
+}
+function fmtRate(rate) { return Math.round(rate*10)+"할 ("+Math.round(rate*100)+"%)"; }
+
+// ══════════════════════════════════════════════════════
+// 렌더링 – Step1 Radio 그리드
+// ══════════════════════════════════════════════════════
+function renderRadios(containerId, items, stateKey, sub_fn) {
+  const g = document.getElementById(containerId);
+  g.innerHTML = "";
+  items.forEach(item => {
+    const d = document.createElement("div");
+    d.className = "radio-card" + (state[stateKey]===item.id?" selected":"");
+    d.innerHTML = `<span class="radio-dot"></span><div><div class="rc-label">${item.label}</div><div class="rc-sub">${sub_fn(item)}</div></div>`;
+    d.onclick = () => { state[stateKey]=item.id; renderRadios(containerId,items,stateKey,sub_fn); };
+    g.appendChild(d);
+  });
+}
+
+function initStep1Radios() {
+  renderRadios("qualGrid", QUALS, "qual", q => `기산호봉: ${q.base}호봉`);
+  renderRadios("eduGrid", EDUS, "edu", e => {
+    const adj = e.total-16;
+    return `학령: ${e.total}년 → 학령가감: ${adj>=0?"+":""}${adj}년`;
+  });
+}
+
+function renderBonusInfo() {
+  state.isSabeom = document.getElementById("isSabeom").checked;
+  state.isSpecial = document.getElementById("isSpecial").checked;
+  document.getElementById("ccSabeom").classList.toggle("checked", state.isSabeom);
+  document.getElementById("ccSpecial").classList.toggle("checked", state.isSpecial);
+  let info="";
+  if(state.isSpecial){
+    const yr = state.isSabeom?2:1;
+    info=`<div class="info-box amber">💡 특수학교(학급) 가산연수 적용: ${state.isSabeom?"사범계 졸업 → ":"비사범계 졸업 → "}+${yr}년</div>`;
+  } else if(state.isSabeom){
+    info=`<div class="info-box blue">💡 사범계 가산연수 적용: +1년</div>`;
+  }
+  document.getElementById("bonusInfo").innerHTML = info;
+}
+
+// ══════════════════════════════════════════════════════
+// 렌더링 – Step2 경력 목록
+// ══════════════════════════════════════════════════════
+function renderCareerList() {
+  const list = document.getElementById("careerList");
+  list.innerHTML = "";
+  state.careers.forEach((c,idx)=>{
+    const wrap = document.createElement("div");
+    wrap.className = "career-item";
+    wrap.id = "ci_"+c.id;
+
+    // 경력 종류 옵션그룹
+    let opts = `<option value="">── 적용 환산율/종류 선택 ──</option>`;
+    const groups = {};
+    CAREER_TYPES.forEach(t=>{ (groups[t.group]=groups[t.group]||[]).push(t); });
+    Object.entries(groups).forEach(([grp,arr])=>{
+      opts += `<optgroup label="${grp}">`;
+      arr.forEach(t=>{ opts+=`<option value="${t.id}" ${c.type===t.id?"selected":""}>${t.label} [${fmtRate(t.rate)}]</option>`; });
+      opts += `</optgroup>`;
+    });
+
+    wrap.innerHTML = `
+      <div class="career-item-head">
+        <span class="career-num">경력 ${idx+1}</span>
+        ${state.careers.length>1?`<button class="btn-del" onclick="removeCareer(${c.id})">✕ 삭제</button>`:""}
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field">
+          <label>출력용 경력 내용</label>
+          <input type="text" value="${c.content||''}" oninput="updateCareer(${c.id}, 'content', this.value)" placeholder="예: 천생중학교 기간제교사">
+        </div>
+        <div class="field">
+          <label>경력 환산율 선택</label>
+          <select onchange="updateCareer(${c.id},'type',this.value)">${opts}</select>
+        </div>
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field">
+          <label>시작일 (포함)</label>
+          <div class="date-wrap">
+            <input type="text" class="date-input" id="cs_${c.id}" value="${c.start}"
+              placeholder="YYYY-MM-DD" maxlength="10"
+              oninput="maskDate(this);updateCareer(${c.id},'start',this.value)"
+              onblur="validateDate(this);updateCareer(${c.id},'start',this.value)">
+            <span class="date-hint">예: 2020-03-01</span>
+          </div>
+        </div>
+        <div class="field">
+          <label id="endLabel_${c.id}">종료일 (포함)</label>
+          <div class="date-wrap">
+            <input type="text" class="date-input" id="ce_${c.id}" value="${c.end}"
+              placeholder="YYYY-MM-DD" maxlength="10"
+              oninput="maskDate(this);updateCareer(${c.id},'end',this.value)"
+              onblur="validateDate(this);updateCareer(${c.id},'end',this.value)">
+            <span class="date-hint">예: 2023-02-28</span>
+          </div>
+        </div>
+      </div>
+      <div class="preview-box preview-hidden" id="pv_${c.id}"></div>
+    `;
+    list.appendChild(wrap);
+  });
+  updateAllPreviews();
+}
+
+function updateCareer(id, field, val) {
+  const c = state.careers.find(x=>x.id===id);
+  if(!c) return;
+  c[field] = val;
+  if(field==="inclEnd"){
+    const el = document.getElementById("endLabel_"+id);
+    if(el) el.textContent = val?"종료일 (만료일, 포함)":"종료일 (퇴직일, 제외)";
+  }
+  updatePreview(id);
+  updateTotalBar();
+}
+
+function updatePreview(id) {
+  const c = state.careers.find(x=>x.id===id);
+  const pv = document.getElementById("pv_"+id);
+  if(!c||!pv) return;
+  const opt = CAREER_TYPES.find(t=>t.id===c.type);
+  if(!opt||!isValidDate(c.start)||!isValidDate(c.end)){
+    pv.className="preview-box preview-hidden"; return;
+  }
+  const raw = calcRaw(c.start, c.end, c.inclEnd);
+  if(!raw){ pv.className="preview-box preview-hidden"; return; }
+  const conv = applyRate(raw, opt.rate);
+  pv.className="preview-box";
+  const rate = Math.round(opt.rate*10);
+  const colors = {
+    "① 교원경력":"background:#eff6ff;border-color:#bfdbfe;color:#1e40af",
+    "② 공무원경력":"background:#f0fdf4;border-color:#bbf7d0;color:#166534",
+    "③ 유사경력 – 강사":"background:#fffbeb;border-color:#fde68a;color:#92400e",
+    "③ 유사경력 – 연구":"background:#faf5ff;border-color:#e9d5ff;color:#6b21a8",
+    "③ 유사경력 – 국가·지방기관":"background:#fff7ed;border-color:#fed7aa;color:#9a3412",
+    "③ 유사경력 – 그 밖의 경력":"background:#fff1f2;border-color:#fecdd3;color:#9f1239",
+  };
+  pv.style.cssText = colors[opt.group]||"";
+  pv.innerHTML = `
+    <div><div class="pb-label">원경력기간</div><div class="pb-val">${fmtPeriod(raw.months,raw.days)}</div></div>
+    <div><div class="pb-label">환산율</div><div class="pb-val">${rate}할 (${rate*10}%)</div></div>
+    <div><div class="pb-label">환산경력</div><div class="pb-val">${fmtPeriod(conv.months,conv.days)}</div></div>
+  `;
+}
+
+function updateAllPreviews() {
+  state.careers.forEach(c=>updatePreview(c.id));
+  updateTotalBar();
+}
+
+function updateTotalBar() {
+  const convList = state.careers.map(c=>{
+    const opt = CAREER_TYPES.find(t=>t.id===c.type);
+    if(!opt||!isValidDate(c.start)||!isValidDate(c.end)) return null;
+    const raw = calcRaw(c.start,c.end,c.inclEnd);
+    if(!raw) return null;
+    return applyRate(raw, opt.rate);
+  }).filter(Boolean);
+
+  const tb = document.getElementById("totalBar");
+  if(convList.length===0){ tb.style.display="none"; return; }
+  const total = sumPeriods(convList);
+  const yr = Math.floor(total.months/12);
+  const remMo = total.months%12;
+  const remDa = total.days;
+  tb.style.display="block";
+  document.getElementById("totalVal").textContent = fmtPeriod(total.months, total.days);
+  const sub = remMo>0||remDa>0
+    ? `≈ ${yr}년 인정 + 잔여 ${fmtPeriod(remMo,remDa)} (다음 승급 기산)`
+    : `≈ ${yr}년 인정`;
+  document.getElementById("totalSub").textContent = sub;
+}
+
+function addCareer() {
+  state.careers.push({id:careerIdSeq++, type:"", start:"", end:"", inclEnd:true, content:""});
+  renderCareerList();
+}
+function removeCareer(id) {
+  state.careers = state.careers.filter(c=>c.id!==id);
+  renderCareerList();
+}
+
+// ══════════════════════════════════════════════════════
+// 렌더링 – Step3 결과 (화면용 & 출력용)
+// ══════════════════════════════════════════════════════
+function renderResult() {
+  const qual = QUALS.find(q=>q.id===state.qual);
+  const edu  = EDUS.find(e=>e.id===state.edu);
+
+  // 입력값 불러오기
+  const inputName = document.getElementById("name").value || "대상자";
+  const inputAffiliation = document.getElementById("affiliation").value || "소속 미입력";
+  const inputPosition = document.getElementById("position").value || "교사";
+  const inputAuthor = document.getElementById("author").value || "서명 미입력";
+  const inputAuthorRank = document.getElementById("authorRank").value || "직급 미입력";
+  const inputEduText = document.getElementById("eduText").value || edu.label;
+  const hireDateStr = document.getElementById("hireDate").value;
+
+  // 경력 환산
+  const details = state.careers.map(c=>{
+    const opt = CAREER_TYPES.find(t=>t.id===c.type);
+    if(!opt||!isValidDate(c.start)||!isValidDate(c.end)) return null;
+    const raw = calcRaw(c.start,c.end,c.inclEnd);
+    if(!raw) return null;
+    const conv = applyRate(raw, opt.rate);
+    return {...c, label:opt.label, group:opt.group, rate:opt.rate, raw, conv};
+  }).filter(Boolean);
+
+  const total = details.length ? sumPeriods(details.map(d=>d.conv)) : {months:0,days:0};
+  const careerYr = Math.floor(total.months/12);
+  const remMo = total.months%12;
+  const remDa = total.days;
+
+  const schoolAdj = edu.total - 16;
+  let bonus = 0;
+  if(state.isSpecial) bonus = state.isSabeom?2:1;
+  else if(state.isSabeom) bonus = 1;
+
+  const initGrade = Math.max(1, qual.base + schoolAdj + bonus + careerYr);
+
+  // 차기승급일 계산 로직 (공무원 보수규정 기반: 1달=30일 통일, 다음 1년 채우는 달의 1일자)
+  let nextPromoStr = "—";
+  if (isValidDate(hireDateStr) && (remMo > 0 || remDa > 0)) {
+    const [hY, hM, hD] = hireDateStr.split("-").map(Number);
+    // 1년을 채우기 위해 필요한 월, 일
+    const reqM = remDa > 0 ? 11 - remMo : 12 - remMo;
+    const reqD = remDa > 0 ? 30 - remDa : 0;
+    
+    let dY = hY;
+    let dM = hM;
+    let dD = hD;
+
+    dD += reqD;
+    if (dD > 30) { dD -= 30; dM += 1; }
+    dM += reqM;
+    if (dM > 12) { dM -= 12; dY += 1; }
+
+    // 승급일은 무조건 1일로 맞춤
+    if (dD !== 1) {
+      dM += 1;
+      if (dM > 12) { dM -= 12; dY += 1; }
+    }
+    nextPromoStr = `${dY}.${String(dM).padStart(2, '0')}.01`;
+  } else if (isValidDate(hireDateStr)) {
+    // 잔여기간이 0인 경우 딱 1년 뒤
+    const [hY, hM, hD] = hireDateStr.split("-").map(Number);
+    let dY = hY + 1;
+    let dM = hM;
+    if (hD !== 1) { dM += 1; if (dM > 12) { dM -= 12; dY += 1; } }
+    nextPromoStr = `${dY}.${String(dM).padStart(2, '0')}.01`;
+  }
+
+  // 1. 화면용 UI 렌더링
+  document.getElementById("rName").textContent = inputName;
+  document.getElementById("rHireDate").textContent = hireDateStr + " 임용";
+  document.getElementById("rQual").textContent = qual.label + " · " + edu.label;
+  document.getElementById("rGradeNum").textContent = initGrade;
+
+  const rem = document.getElementById("rRemain");
+  if(remMo>0||remDa>0){
+    rem.style.display="block";
+    document.getElementById("rRemainVal").textContent = fmtPeriod(remMo,remDa) + ` (다음 승급예정: ${nextPromoStr})`;
+  } else { rem.style.display="none"; }
+
+  // Calc process
+  const proc = document.getElementById("calcProcess");
+  const sign = v => (v>=0?"+":"")+v;
+  let bonusRow="";
+  if(bonus>0){
+    const bonusLabel = state.isSpecial
+      ? `특수학교(학급) + ${state.isSabeom?"사범계":"비사범계"} → +${bonus}년`
+      : "사범계 가산연수 +1년";
+    bonusRow=`<div class="calc-row purple"><div><div class="cr-label">③ 가산연수</div><div class="cr-sub">${bonusLabel}</div></div><div class="cr-val">+${bonus}년</div></div>`;
+  }
+  const careerLabel = bonus>0?"④":"③";
+  const eqParts = [`${qual.base}`, `(${sign(schoolAdj)})`, bonus>0?`+${bonus}`:"", `+${careerYr}`].filter(Boolean).join(" + ").replace("+ (+","+ (");
+
+  proc.innerHTML = `
+    <div class="calc-row blue">
+      <div><div class="cr-label">① 기산호봉</div><div class="cr-sub">자격: ${qual.label}</div></div>
+      <div class="cr-val">${qual.base}호봉</div>
+    </div>
+    <div class="calc-row green">
+      <div><div class="cr-label">② 학령가감 (학령 − 16)</div><div class="cr-sub">학령 ${edu.total}년 − 16 = ${schoolAdj}년 · 학력: ${edu.label}</div></div>
+      <div class="cr-val">${sign(schoolAdj)}년</div>
+    </div>
+    ${bonusRow}
+    <div class="calc-row amber">
+      <div><div class="cr-label">${careerLabel} 환산경력 합계</div>
+      <div class="cr-sub">총 환산경력: ${fmtPeriod(total.months,total.days)} → ${careerYr}년 인정 (잔여 ${fmtPeriod(remMo,remDa)})</div></div>
+      <div class="cr-val">+${careerYr}년</div>
+    </div>
+    <div class="calc-total">
+      <div>
+        <div class="ct-eq">초임호봉 = ① + ② ${bonus>0?"+ ③ ":""}+ ${careerLabel}</div>
+        <div style="font-size:13px;color:#93c5fd;margin-top:2px">= ${eqParts} = <strong>${initGrade}</strong></div>
+      </div>
+      <div class="ct-num">${initGrade}호봉</div>
+    </div>
+  `;
+
+  // Career table (Screen)
+  const tbody = document.getElementById("careerTableBody");
+  tbody.innerHTML = "";
+  details.forEach(d=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.content || d.label} <div style="font-size:10px; color:#9ca3af; margin-top:2px">${d.label}</div></td>
+      <td style="color:#6b7280;font-size:12px">${d.start} ~ ${d.end}</td>
+      <td style="text-align:center;font-weight:600">${fmtPeriod(d.raw.months,d.raw.days)}</td>
+      <td style="text-align:center"><span class="tag">${Math.round(d.rate*10)}할</span></td>
+      <td style="text-align:center;font-weight:700;color:#1a3a6b">${fmtPeriod(d.conv.months,d.conv.days)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td colspan="4" class="td-sum">합계</td><td class="td-sum" style="text-align:center;font-size:15px">${fmtPeriod(total.months,total.days)}</td>`;
+  tbody.appendChild(tr);
+
+  // 2. 인쇄용(Excel Format) 렌더링
+  document.getElementById("pAffiliation").textContent = inputAffiliation;
+  document.getElementById("pPosition").textContent = inputPosition;
+  document.getElementById("pName").textContent = inputName + " (인)";
+  document.getElementById("pQual").textContent = qual.label;
+  document.getElementById("pEduText").textContent = inputEduText;
+  document.getElementById("pGrade").textContent = initGrade;
+
+  // 조서 하단 요약표 채우기
+  document.getElementById("pBaseGrade").textContent = qual.base + "호봉";
+  document.getElementById("pEduYears").textContent = edu.total + "년";
+  document.getElementById("pBonusYears").textContent = bonus > 0 ? bonus + "년" : "0년";
+  document.getElementById("pRemain").textContent = remMo > 0 || remDa > 0 ? `${remMo}월 ${remDa}일` : "없음";
+  document.getElementById("pFinalGrade").textContent = initGrade + "호봉";
+  document.getElementById("pNextPromo").textContent = nextPromoStr;
+
+  const pBody = document.getElementById("pCareerBody");
+  pBody.innerHTML = "";
+  details.forEach(d => {
+    const [sY, sM, sD] = d.start.split("-").map(Number);
+    const [eY, eM, eD] = d.end.split("-").map(Number);
+    const rRate = Math.round(d.rate * 100);
+    const cY = Math.floor(d.conv.months / 12);
+    const cM = d.conv.months % 12;
+    const cD = d.conv.days;
+    const cContent = d.content || d.label;
+
+    pBody.innerHTML += `
+      <tr>
+        <td class="txt-left">${cContent}</td>
+        <td>${sY}</td><td>${sM}</td><td>${sD}</td>
+        <td>${eY}</td><td>${eM}</td><td>${eD}</td>
+        <td>${rRate}</td>
+        <td>${cY}</td><td>${cM}</td><td>${cD}</td>
+        <td></td>
+      </tr>
+    `;
+  });
+  
+  // 합계행 출력
+  const totY = Math.floor(total.months / 12);
+  const totM = total.months % 12;
+  const totD = total.days;
+  pBody.innerHTML += `
+    <tr style="background:#f9fafb; font-weight:bold;">
+      <td class="txt-left" colspan="7" style="text-align:center">합 계</td>
+      <td></td>
+      <td>${totY}</td><td>${totM}</td><td>${totD}</td>
+      <td></td>
+    </tr>
+  `;
+
+  // 서명 및 호봉획정 날짜 (임용일로 설정)
+  if(isValidDate(hireDateStr)) {
+    const [hy, hm, hd] = hireDateStr.split("-");
+    document.getElementById("pPrintDate").textContent = `${hy}년 ${Number(hm)}월 ${Number(hd)}일`;
+  } else {
+    document.getElementById("pPrintDate").textContent = hireDateStr || "임용일 미입력";
+  }
+  
+  document.getElementById("pAuthorRank").textContent = inputAuthorRank;
+  document.getElementById("pAuthor").textContent = inputAuthor;
+}
+
+// ══════════════════════════════════════════════════════
+// 스텝 이동
+// ══════════════════════════════════════════════════════
+function goStep(n) {
+  [1,2,3].forEach(i=>{
+    document.getElementById("step"+i).style.display = i===n?"":"none";
+    const btn = document.getElementById("stepBtn"+i);
+    btn.className = "step-btn" + (i===n?" active":"") + (i<n?" done":"");
+    const numEl = document.getElementById("stepNum"+i);
+    numEl.textContent = i<n?"✓":i;
+  });
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function toStep2() {
+  if(!document.getElementById("name").value.trim()){showAlert("성명을 입력해주세요."); return;}
+  const hd = document.getElementById("hireDate").value;
+  if(!isValidDate(hd)){showAlert("임용일을 올바른 형식(YYYY-MM-DD)으로 입력해주세요."); return;}
+  if(!state.qual){showAlert("교원자격증을 선택해주세요."); return;}
+  if(!state.edu){showAlert("최종 학력을 선택해주세요."); return;}
+  
+  if(state.careers.length===0) addCareer();
+  renderCareerList();
+  goStep(2);
+}
+
+function toStep3() {
+  const valid = state.careers.some(c=>c.type&&isValidDate(c.start)&&isValidDate(c.end));
+  if(!valid){showAlert("경력을 1건 이상 완전히 입력해주세요.\n경력 종류, 시작일, 종료일이 모두 필요합니다."); return;}
+  renderResult();
+  goStep(3);
+}
+
+function resetAll() {
+  showConfirm("입력한 내용을 모두 초기화할까요?", function() {
+    state = {qual:"", edu:"", isSabeom:false, isSpecial:false, careers:[]};
+    careerIdSeq = 1;
+    document.getElementById("name").value="";
+    document.getElementById("hireDate").value="";
+    document.getElementById("eduText").value="";
+    document.getElementById("affiliation").value="";
+    document.getElementById("position").value="";
+    document.getElementById("author").value="";
+    document.getElementById("authorRank").value="";
+    document.getElementById("isSabeom").checked=false;
+    document.getElementById("isSpecial").checked=false;
+    document.getElementById("ccSabeom").classList.remove("checked");
+    document.getElementById("ccSpecial").classList.remove("checked");
+    document.getElementById("bonusInfo").innerHTML="";
+    initStep1Radios();
+    goStep(1);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// 인쇄용 미리보기 로직 (Iframe 우회 및 시각적 안내)
+// ══════════════════════════════════════════════════════
+function openPrintView() {
+  document.body.classList.add("print-preview-mode");
+  setTimeout(() => {
+    try { window.print(); } catch (e) { console.warn("Print fail", e); }
+  }, 300);
+}
+
+function closePrintView() {
+  document.body.classList.remove("print-preview-mode");
+}
+
+// ══════════════════════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════════════════════
+initStep1Radios();
+document.getElementById("isSabeom").addEventListener("change", renderBonusInfo);
+document.getElementById("isSpecial").addEventListener("change", renderBonusInfo);
+document.getElementById("hireDate").addEventListener("input", function(){ maskDate(this); });
+document.getElementById("hireDate").addEventListener("blur", function(){ validateDate(this); });
+</script>
+</body>
+</html>
