@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>손셀파의 교육행정 효율화 및 간소화 연구소</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f8fafc;
+            scroll-behavior: smooth;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .suggestion-item {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modal Backdrop */
+        #admin-modal {
+            display: none;
+            background: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass-morphism border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i class="fas fa-microscope text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-gray-900">
+                    손셀파 연구소
+                </h1>
+            </div>
+            <nav class="flex space-x-4">
+                <a href="#" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">홈</a>
+                <a href="#board-section" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">건의사항</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="relative bg-white pt-16 pb-12 px-4 sm:px-6 lg:pt-24 lg:pb-20 lg:px-8">
+        <div class="relative max-w-7xl mx-auto text-center">
+            <h2 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                <span class="block">손셀파의</span>
+                <span class="block gradient-text mt-2">교육행정 효율화 및 간소화 연구소</span>
+            </h2>
+            <p class="mt-6 max-w-2xl mx-auto text-xl text-gray-500">
+                행정실 주무관님들의 업무 시간을 아끼기 위해 <br class="hidden sm:block">
+                제작한 업무 보조 도구 모음입니다.
+            </p>
+        </div>
+    </section>
+
+    <!-- Programs Grid -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Card 1: 기간제교원 호봉계산기 -->
+            <a href="https://feedingstick321-maker.github.io/wage/hobong.html" target="_blank" 
+               class="flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-100 card-hover transition-all duration-300">
+                <div class="p-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-calculator text-2xl"></i>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            기간제교원 전용
+                        </span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">호봉계산기 및 호봉획정조서 작성기</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        복잡한 호봉 획정 업무를 클릭 몇 번으로 해결하세요. 경력 계산부터 조서 출력까지 한 번에 가능합니다.
+                    </p>
+                </div>
+                <div class="bg-gray-50 px-8 py-4 flex items-center text-blue-600 font-semibold text-sm">
+                    바로가기 <i class="fas fa-arrow-right ml-2"></i>
+                </div>
+            </a>
+
+            <!-- Card 2: 임금 계산기 -->
+            <a href="https://feedingstick321-maker.github.io/wage/" target="_blank" 
+               class="flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-100 card-hover transition-all duration-300">
+                <div class="p-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-won-sign text-2xl"></i>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            공무직/기간제
+                        </span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">통상·평균임금 계산기</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        교육공무직원 및 기간제교원의 퇴직금, 수당 산정을 위한 통상임금과 평균임금을 정확하게 계산합니다.
+                    </p>
+                </div>
+                <div class="bg-gray-50 px-8 py-4 flex items-center text-green-600 font-semibold text-sm">
+                    바로가기 <i class="fas fa-arrow-right ml-2"></i>
+                </div>
+            </a>
+
+            <!-- Card 3: 카드 매칭 시스템 -->
+            <a href="https://feedingstick321-maker.github.io/wage/matching.html" target="_blank" 
+               class="flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-100 card-hover transition-all duration-300">
+                <div class="p-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-credit-card text-2xl"></i>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                            회계 업무용
+                        </span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">신용카드 자동 매칭 시스템</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        신용카드 지출부와 이용대금명세서를 자동으로 매칭하여 회계 검증 시간을 획기적으로 단축시켜 줍니다.
+                    </p>
+                </div>
+                <div class="bg-gray-50 px-8 py-4 flex items-center text-purple-600 font-semibold text-sm">
+                    바로가기 <i class="fas fa-arrow-right ml-2"></i>
+                </div>
+            </a>
+
+            <!-- Card 4: 수도광열비 계산기 -->
+            <a href="https://feedingstick321-maker.github.io/wage/ele.html" target="_blank" 
+               class="flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-100 card-hover transition-all duration-300">
+                <div class="p-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-bolt text-2xl"></i>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                            공사 정산
+                        </span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">공사 수도광열비 계산기</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        시설 공사 과정에서 발생하는 전기·수도 사용량을 일할 계산하여 정산 금액을 빠르고 정확하게 산출합니다.
+                    </p>
+                </div>
+                <div class="bg-gray-50 px-8 py-4 flex items-center text-orange-600 font-semibold text-sm">
+                    바로가기 <i class="fas fa-arrow-right ml-2"></i>
+                </div>
+            </a>
+        </div>
+    </main>
+
+    <!-- Suggestions Board Section -->
+    <section id="board-section" class="bg-slate-50 border-t border-gray-200 py-20">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900">건의사항 및 피드백</h2>
+                <p class="mt-4 text-gray-600">더 필요한 기능이나 개선이 필요한 점이 있다면 자유롭게 남겨주세요.</p>
+            </div>
+
+            <!-- Form -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-12">
+                <div class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label for="user-name" class="block text-sm font-medium text-gray-700 mb-1">성함 (또는 닉네임)</label>
+                        <input type="text" id="user-name" placeholder="주무관님" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label for="user-content" class="block text-sm font-medium text-gray-700 mb-1">내용</label>
+                        <textarea id="user-content" rows="4" placeholder="어떤 점이 궁금하시거나 필요하신가요?" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"></textarea>
+                    </div>
+                    <button id="submit-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center space-x-2">
+                        <span>의견 등록하기</span>
+                        <i class="fas fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Board List -->
+            <div id="suggestions-list" class="space-y-4">
+                <div class="text-center py-10 text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>의견을 불러오는 중입니다...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Admin Password Modal -->
+    <div id="admin-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">관리자 확인</h3>
+            <p class="text-gray-600 text-sm mb-4">삭제를 위해 관리자 비밀번호를 입력해주세요.</p>
+            <input type="password" id="admin-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 outline-none focus:ring-2 focus:ring-red-500" placeholder="비밀번호 입력">
+            <div class="flex space-x-2">
+                <button id="modal-cancel" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">취소</button>
+                <button id="modal-confirm" class="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-12 px-4 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col items-center">
+            <p class="text-gray-400 text-sm text-center">
+                &copy; 2025 손셀파의 교육행정 효율화 및 간소화 연구소. <br class="sm:hidden">
+                본 프로그램은 실제 계산과 오차가 있을 수 있으므로 최종 검토는 본인이 직접 하시기 바랍니다.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const listContainer = document.getElementById('suggestions-list');
+        const submitBtn = document.getElementById('submit-btn');
+        const nameInput = document.getElementById('user-name');
+        const contentInput = document.getElementById('user-content');
+        const modal = document.getElementById('admin-modal');
+        const modalPassword = document.getElementById('admin-password');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+
+        let currentUser = null;
+        let targetDocId = null;
+        const ADMIN_PWD = "870826";
+
+        async function initAuth() {
+            try {
+                if (initialToken) {
+                    await signInWithCustomToken(auth, initialToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth failed:", error);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) loadSuggestions();
+        });
+
+        function loadSuggestions() {
+            if (!currentUser) return;
+            const suggestionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'suggestions');
+            onSnapshot(query(suggestionsRef), (snapshot) => {
+                const docs = [];
+                snapshot.forEach(d => docs.push({ id: d.id, ...d.data() }));
+                docs.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                renderSuggestions(docs);
+            }, (error) => {
+                listContainer.innerHTML = `<div class='text-center text-red-500'>목록을 불러오지 못했습니다.</div>`;
+            });
+        }
+
+        function renderSuggestions(docs) {
+            if (docs.length === 0) {
+                listContainer.innerHTML = `<div class="bg-white p-10 rounded-xl text-center text-gray-400 border border-dashed border-gray-300">의견이 없습니다.</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = docs.map(docData => {
+                const date = docData.createdAt ? new Date(docData.createdAt.toMillis()).toLocaleString('ko-KR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                }) : '방금 전';
+
+                return `
+                    <div class="suggestion-item bg-white p-6 rounded-xl border border-gray-100 shadow-sm relative group">
+                        <button onclick="window.openDeleteModal('${docData.id}')" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <div class="flex justify-between items-start mb-2 pr-8">
+                            <span class="font-bold text-gray-900">${escapeHtml(docData.userName || '익명')}</span>
+                            <span class="text-xs text-gray-400">${date}</span>
+                        </div>
+                        <p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(docData.content)}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Global function for onclick
+        window.openDeleteModal = (id) => {
+            targetDocId = id;
+            modal.style.display = "flex";
+            modalPassword.focus();
+        };
+
+        modalCancel.onclick = () => {
+            modal.style.display = "none";
+            modalPassword.value = "";
+            targetDocId = null;
+        };
+
+        modalConfirm.onclick = async () => {
+            if (modalPassword.value === ADMIN_PWD) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'suggestions', targetDocId);
+                    await deleteDoc(docRef);
+                    alertCustom("삭제되었습니다.");
+                    modalCancel.onclick();
+                } catch (e) {
+                    alertCustom("삭제에 실패했습니다.");
+                }
+            } else {
+                alertCustom("비밀번호가 틀렸습니다.");
+            }
+        };
+
+        submitBtn.addEventListener('click', async () => {
+            const name = nameInput.value.trim();
+            const content = contentInput.value.trim();
+            if (!content) { alertCustom("내용을 입력해주세요!"); return; }
+            if (!currentUser) return;
+
+            submitBtn.disabled = true;
+            try {
+                const suggestionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'suggestions');
+                await addDoc(suggestionsRef, {
+                    userName: name || "주무관님",
+                    content: content,
+                    createdAt: serverTimestamp(),
+                    userId: currentUser.uid
+                });
+                nameInput.value = ""; contentInput.value = "";
+                alertCustom("등록되었습니다.");
+            } catch (error) {
+                alertCustom("등록 실패!");
+            } finally { submitBtn.disabled = false; }
+        });
+
+        function alertCustom(msg) {
+            const alertBox = document.createElement('div');
+            alertBox.className = "fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-[200] transition-opacity duration-300 opacity-0";
+            alertBox.textContent = msg;
+            document.body.appendChild(alertBox);
+            setTimeout(() => alertBox.style.opacity = "1", 10);
+            setTimeout(() => { alertBox.style.opacity = "0"; setTimeout(() => alertBox.remove(), 300); }, 3000);
+        }
+
+        initAuth();
+    </script>
+</body>
+</html>
