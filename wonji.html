@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
   Upload, FileText, AlertCircle, CheckCircle, 
-  Download, RefreshCw, Search, Filter, DollarSign, FileSpreadsheet
+  Download, RefreshCw, Search, Filter, DollarSign, FileSpreadsheet,
+  Info, Lightbulb
 } from 'lucide-react';
 
 export default function App() {
@@ -256,46 +257,115 @@ export default function App() {
   if (data.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 font-sans">
-        <div className="max-w-xl w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <div className="text-center mb-8">
-            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileSpreadsheet className="text-blue-600 w-8 h-8" />
+        <div className="max-w-4xl w-full space-y-6">
+          {/* Main Upload Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+            <div className="text-center mb-8">
+              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileSpreadsheet className="text-blue-600 w-8 h-8" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-800">원인행위-지출결의 차액 분석기</h1>
+              <p className="text-gray-500 mt-2">에듀파인 원인행위 목록을 업로드하여<br/>금액이 불일치하는 항목을 자동으로 찾아냅니다.</p>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">원인행위-지출결의 차액 분석기</h1>
-            <p className="text-gray-500 mt-2">에듀파인 원인행위 목록을 업로드하여<br/>금액이 불일치하는 항목을 자동으로 찾아냅니다.</p>
+
+            <div
+              className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors ${
+                isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input
+                type="file"
+                id="file-upload"
+                className="hidden"
+                accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                onChange={handleFileInput}
+              />
+              <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                <Upload className={`w-12 h-12 mb-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+                <span className="text-lg font-medium text-gray-700">여기로 파일을 드래그하거나 클릭하여 업로드</span>
+                <div className="flex gap-2 mt-3">
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">.xlsx (Excel)</span>
+                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">.csv</span>
+                </div>
+              </label>
+            </div>
+            
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-lg flex items-center">
+                <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                <span className="text-sm font-medium">{error}</span>
+              </div>
+            )}
           </div>
 
-          <div
-            className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors ${
-              isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-              onChange={handleFileInput}
-            />
-            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
-              <Upload className={`w-12 h-12 mb-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
-              <span className="text-lg font-medium text-gray-700">여기로 파일을 드래그하거나 클릭하여 업로드</span>
-              <div className="flex gap-2 mt-3">
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">.xlsx (Excel)</span>
-                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">.csv</span>
-              </div>
-            </label>
-          </div>
-          
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-lg flex items-center">
-              <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span className="text-sm font-medium">{error}</span>
+          {/* Instructions Card */}
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center mb-6">
+              <Info className="w-6 h-6 text-blue-500 mr-2" />
+              <h2 className="text-xl font-bold text-gray-800">프로그램 사용법</h2>
             </div>
-          )}
+            
+            <div className="flex flex-col md:flex-row gap-8 items-stretch">
+              {/* Image Area - 클릭 시 새 창에서 크게 보기 기능 추가 */}
+              <div className="w-full md:w-1/2 bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center p-2 min-h-[200px] relative shadow-inner group">
+                <a 
+                  href="https://feedingstick321-maker.github.io/wage/use1.png" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-full h-full relative block cursor-pointer overflow-hidden rounded-lg"
+                  title="클릭하여 원본 크기로 보기"
+                >
+                  <img 
+                    src="https://feedingstick321-maker.github.io/wage/use1.png" 
+                    alt="[에듀파인 화면 안내]" 
+                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]" 
+                  />
+                  {/* 마우스 호버 시 나타나는 오버레이 UI */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="bg-white/95 text-gray-800 px-4 py-2 rounded-full text-sm font-bold flex items-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                      <Search className="w-4 h-4 mr-2 text-blue-600" />
+                      크게 보기
+                    </div>
+                  </div>
+                </a>
+              </div>
+
+              {/* Steps & Tip */}
+              <div className="w-full md:w-1/2 flex flex-col justify-center">
+                <ol className="space-y-4 text-sm text-gray-700">
+                  <li className="flex items-start">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold mr-3 shrink-0">1</span>
+                    <span className="mt-0.5">K-에듀파인 <strong className="text-gray-900">원인행위</strong> 메뉴로 이동</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold mr-3 shrink-0">2</span>
+                    <span className="mt-0.5">목록 우측 상단의 <strong className="text-gray-900">전체보기</strong> 클릭</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold mr-3 shrink-0">3</span>
+                    <span className="mt-0.5"><strong className="text-blue-600">엑셀 다운로드</strong> 버튼을 눌러 파일 저장</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold mr-3 shrink-0">4</span>
+                    <span className="mt-0.5">다운로드한 파일을 본 프로그램 위 점선 영역에 업로드</span>
+                  </li>
+                </ol>
+
+                <div className="mt-6 bg-amber-50 rounded-xl p-4 border border-amber-200 flex items-start">
+                  <Lightbulb className="w-6 h-6 text-amber-500 mr-3 shrink-0" />
+                  <div>
+                    <h4 className="font-bold text-amber-900 text-sm mb-1">회계 마감 시 유용합니다!</h4>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      연말이나 회계 연도 마감 시, 수많은 내역 중 지출결의가 완전히 끝나지 않아 <strong>미결의 잔액이 남아있는 건</strong>을 한눈에 빠르고 정확하게 찾아낼 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
