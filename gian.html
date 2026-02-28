@@ -1,0 +1,341 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload, FileText, Copy, AlertCircle, Loader2, CheckCircle, Trash2, Edit3 } from 'lucide-react';
+
+export default function App() {
+  const [pdfJsReady, setPdfJsReady] = useState(false);
+  const [error, setError] = useState(null);
+  const [results, setResults] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // PDF.js 라이브러리 동적 로드
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      setPdfJsReady(true);
+    };
+    script.onerror = () => setError('PDF 처리 라이브러리를 불러오는데 실패했습니다. 인터넷 연결을 확인해주세요.');
+    document.head.appendChild(script);
+  }, []);
+
+  // Gemini API 호출 (재시도 로직 포함)
+  const analyzeContractWithGemini = async (text) => {
+    const apiKey = ""; // 런타임 환경에서 자동 주입됨
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+    const payload = {
+      contents: [{ parts: [{ text: "다음 계약서 텍스트에서 주요 정보를 추출하세요:\n\n" + text.substring(0, 15000) }] }],
+      systemInstruction: {
+        parts: [{ text: "당신은 나라장터 계약서 분석 전문가입니다. 주어진 텍스트에서 정보를 추출하여 정확한 JSON 형태로 반환하세요. 날짜는 'YYYY.MM.DD.' 형식(끝 마침표 포함)으로, 금액의 한글 표기는 숫자를 올바른 한글 금액으로 변환하세요 (예: 4,961,600 -> 사백구십육만천육백). 사업자등록번호는 'XXX-XX-XXXXX' 형식으로 작성하세요. 계약방법 법령은 법률명과 조항을 모두 포함하세요. 특히 '수의계약'인 경우 조항 뒤에 이어지는 구체적인 사유 및 대상 텍스트까지 생략 없이 전부 포함하되, 절대 줄바꿈이나 하이픈(-)으로 나누지 말고 자연스럽게 한 줄로 이어서 '계약방법_법령'에 추출하세요. (예: '지방계약법 (제25조제1항5호바목) 추정가격 2천만원 초과 1억원 이하 물품·용역(여성기업, 장애인기업, 사회적기업, 사회적협동조합, 자활기업, 마을기업 계약)'). 해당 정보가 문서에 없으면 null을 반환하세요." }]
+      },
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            "계약유형": { type: "STRING", description: "공사, 용역, 물품 중 하나" },
+            "계약건명": { type: "STRING" },
+            "계약금액_숫자": { type: "STRING", description: "콤마가 포함된 숫자형태 문자열" },
+            "계약금액_한글": { type: "STRING" },
+            "착공일자": { type: "STRING", nullable: true },
+            "총준공일자": { type: "STRING", nullable: true },
+            "착수일자": { type: "STRING", nullable: true },
+            "총완수일자": { type: "STRING", nullable: true },
+            "납품기한": { type: "STRING", nullable: true },
+            "계약상대자_상호": { type: "STRING" },
+            "계약상대자_전화": { type: "STRING", nullable: true },
+            "계약상대자_사업자번호": { type: "STRING", nullable: true },
+            "계약방법_명칭": { type: "STRING" },
+            "계약방법_법령": { type: "STRING", nullable: true }
+          }
+        }
+      }
+    };
+
+    const retries = [1000, 2000, 4000, 8000, 16000];
+    for (let i = 0; i <= retries.length; i++) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`API 오류: ${res.status}`);
+        const data = await res.json();
+        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        return JSON.parse(jsonText);
+      } catch (err) {
+        if (i === retries.length) throw err;
+        await new Promise(r => setTimeout(r, retries[i])); // 지수 백오프 대기
+      }
+    }
+  };
+
+  // PDF 텍스트 추출
+  const extractPdfText = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument(arrayBuffer).promise;
+    let fullText = "";
+    
+    // 최대 5페이지까지만 텍스트 추출 (주요 정보는 초반에 있음)
+    const maxPages = Math.min(pdf.numPages, 5);
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(" ");
+      fullText += pageText + "\n\n";
+    }
+    return fullText;
+  };
+
+  // 기안문 텍스트 생성 로직
+  const buildGianmun = (info) => {
+    const amtNumber = info.계약금액_숫자 || '0';
+    const amtKorean = info.계약금액_한글 || '';
+    const amountStr = `금${amtNumber}원(금${amtKorean}원)`;
+    
+    const partnerName = info.계약상대자_상호 || '알수없음';
+    const partnerPhone = info.계약상대자_전화 || '번호없음';
+    const partnerBizNo = info.계약상대자_사업자번호 || '번호없음';
+    const partnerStr = `${partnerName} (전화: ${partnerPhone}, 사업자등록번호: ${partnerBizNo})`;
+    
+    // 줄바꿈 및 불필요한 기호를 제거하여 완벽하게 한 줄로 합침
+    let beopryeong = info.계약방법_법령 || '';
+    beopryeong = beopryeong.replace(/[\n\r]+/g, ' ').replace(/\s+-\s+/g, ' ').replace(/\s+/g, ' ').trim();
+    const methodStr = `${info.계약방법_명칭 || ''} ${beopryeong ? `(${beopryeong})` : ''}`.trim();
+
+    let periodStr = "";
+    let introStr = `1. ${info.계약건명 || '해당 건'}을(를) 아래와 같이 체결하고자 합니다.`;
+
+    if (info.계약유형 === "물품" || info.계약건명?.includes("구매")) {
+      periodStr = `다. 납품기한: ${info.납품기한 || '알수없음'}`;
+      introStr = `1. 관련\n  가. [관련 문서 번호 및 제목 입력]\n2. ${info.계약건명 || '해당 건'} 구매 계약을 아래와 같이 체결하고자 합니다.`;
+    } else if (info.계약유형 === "공사" || info.계약건명?.includes("공사")) {
+      periodStr = `다. 계약기간: ${info.착공일자 || '알수없음'} ~ ${info.총준공일자 || '알수없음'}`;
+    } else {
+      periodStr = `다. 계약기간: ${info.착수일자 || '알수없음'} ~ ${info.총완수일자 || '알수없음'}`;
+    }
+
+    return `${introStr}\n 가. 계약건명: ${info.계약건명 || '알수없음'}\n 나. 계약금액: ${amountStr}\n ${periodStr}\n 라. 계약상대자: ${partnerStr}\n 마. 계약방법: ${methodStr}`;
+  };
+
+  // 파일 처리 메인 로직
+  const processFiles = async (files) => {
+    if (!pdfJsReady) {
+      setError("PDF 엔진이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    setError(null);
+
+    const newResults = Array.from(files).filter(f => f.type === 'application/pdf').map(file => ({
+      id: crypto.randomUUID(),
+      file,
+      status: 'processing',
+      draftText: '',
+      contractInfo: null,
+      errorMsg: null
+    }));
+
+    if (newResults.length === 0) {
+      setError("PDF 파일만 업로드 가능합니다.");
+      return;
+    }
+
+    setResults(prev => [...newResults, ...prev]);
+
+    for (const item of newResults) {
+      try {
+        const text = await extractPdfText(item.file);
+        const info = await analyzeContractWithGemini(text);
+        const draftText = buildGianmun(info);
+
+        setResults(prev => prev.map(r => r.id === item.id ? { 
+          ...r, 
+          status: 'success', 
+          contractInfo: info, 
+          draftText 
+        } : r));
+
+      } catch (err) {
+        console.error(err);
+        setResults(prev => prev.map(r => r.id === item.id ? { 
+          ...r, 
+          status: 'error', 
+          errorMsg: '문서 분석 중 오류가 발생했습니다.' 
+        } : r));
+      }
+    }
+  };
+
+  // 드래그 앤 드롭 이벤트 핸들러
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+  const handleFileInput = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
+    }
+  };
+
+  // 텍스트 복사 핸들러
+  const copyToClipboard = (text) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      alert("클립보드에 복사되었습니다.");
+    } catch (err) {
+      console.error('복사 실패', err);
+    }
+    document.body.removeChild(textArea);
+  };
+
+  // 결과 항목 삭제
+  const removeResult = (id) => {
+    setResults(prev => prev.filter(r => r.id !== id));
+  };
+
+  // 텍스트 편집 핸들러
+  const handleTextChange = (id, newText) => {
+    setResults(prev => prev.map(r => r.id === id ? { ...r, draftText: newText } : r));
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 p-6 font-sans">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* 헤더 */}
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center justify-center gap-3">
+            <FileText className="w-8 h-8 text-blue-600" />
+            계약 기안문 자동 생성기
+          </h1>
+          <p className="text-slate-500 mt-2">나라장터 계약서 PDF를 업로드하면 자동으로 기안문을 작성해 드립니다.</p>
+        </header>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3 border border-red-200">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        {/* 업로드 영역 */}
+        <div 
+          className={`relative w-full p-12 mb-10 border-2 border-dashed rounded-2xl transition-all duration-200 text-center cursor-pointer 
+            ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-white hover:border-blue-400 hover:bg-slate-50'}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileInput} 
+            multiple 
+            accept="application/pdf" 
+            className="hidden" 
+          />
+          <div className="flex flex-col items-center justify-center gap-4 pointer-events-none">
+            <div className={`p-4 rounded-full ${isDragging ? 'bg-blue-100' : 'bg-slate-100'}`}>
+              <Upload className={`w-10 h-10 ${isDragging ? 'text-blue-600' : 'text-slate-400'}`} />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-slate-700">PDF 파일을 이곳에 드롭하거나 클릭하여 업로드</p>
+              <p className="text-sm text-slate-500 mt-1">여러 파일을 한 번에 선택할 수 있습니다.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 결과 영역 */}
+        <div className="space-y-6">
+          {results.map((item) => (
+            <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              {/* 카드 헤더 */}
+              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {item.status === 'processing' && <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />}
+                  {item.status === 'success' && <CheckCircle className="w-5 h-5 text-green-500" />}
+                  {item.status === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
+                  <h3 className="font-semibold text-slate-800 truncate max-w-sm" title={item.file.name}>
+                    {item.file.name}
+                  </h3>
+                  {item.status === 'success' && item.contractInfo && (
+                    <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+                      {item.contractInfo.계약유형}
+                    </span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => removeResult(item.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="목록에서 제거"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 카드 본문 */}
+              <div className="p-6">
+                {item.status === 'processing' && (
+                  <p className="text-slate-500 flex items-center justify-center py-8">
+                    계약서를 인공지능이 분석 중입니다...
+                  </p>
+                )}
+
+                {item.status === 'error' && (
+                  <p className="text-red-500 flex items-center justify-center py-8">
+                    {item.errorMsg}
+                  </p>
+                )}
+
+                {item.status === 'success' && (
+                  <div className="relative group">
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <button 
+                        onClick={() => copyToClipboard(item.draftText)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Copy className="w-4 h-4" />
+                        복사하기
+                      </button>
+                    </div>
+                    
+                    <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 mb-2">
+                      <Edit3 className="w-4 h-4" /> 기안문 내용 (자유롭게 수정 가능합니다)
+                    </label>
+                    <textarea
+                      value={item.draftText}
+                      onChange={(e) => handleTextChange(item.id, e.target.value)}
+                      className="w-full h-64 p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm leading-relaxed text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y"
+                      spellCheck="false"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {results.length === 0 && (
+            <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-200 border-dashed">
+              아직 처리된 문서가 없습니다.
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
