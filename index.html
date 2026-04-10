@@ -1,1133 +1,326 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>교육공무직·기간제교원 통합 임금계산기 (by 손셀파)</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- React & ReactDOM -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  
-  <!-- Babel -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교육공무직 급여 AI 상담봇</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        body {
+            background: linear-gradient(180deg, #f0f4f0 0%, #ffffff 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+        }
+        .main-container {
+            width: 100%;
+            max-width: 850px;
+            margin-top: 4vh;
+            padding: 20px;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .bot-logo {
+            width: 70px; height: 70px;
+            background: #16a34a; color: white;
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 900;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 20px rgba(22, 163, 74, 0.15);
+        }
+        #chat-area {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.06);
+            margin-top: 30px;
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #chatBox {
+            height: 500px;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+        #chatBox::-webkit-scrollbar { width: 5px; }
+        #chatBox::-webkit-scrollbar-track { background: transparent; }
+        #chatBox::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        
+        .msg-row { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 4px; }
+        .msg-row.user { justify-content: flex-end; }
+        .msg-row.ai { justify-content: flex-start; }
+        
+        .msg-bubble {
+            max-width: 80%; padding: 12px 18px;
+            font-size: 15px; line-height: 1.7; word-break: keep-all;
+            position: relative;
+        }
+        .msg-bubble.user {
+            background: #16a34a; color: #fff;
+            border-radius: 20px 20px 4px 20px;
+        }
+        .msg-bubble.ai {
+            background: #f1f5f1; color: #1e293b;
+            border-radius: 20px 20px 20px 4px;
+        }
+        .msg-bubble.ai a {
+            color: #16a34a;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+        .ai-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; color: #fff; font-weight: 800; flex-shrink: 0;
+        }
+        .input-bar {
+            padding: 16px 20px;
+            border-top: 1px solid #f1f5f1;
+            display: flex; gap: 10px;
+            background: #fafbfa;
+        }
+        .input-bar input {
+            flex: 1; padding: 14px 20px;
+            border: 2px solid #e2e8e0; border-radius: 16px;
+            outline: none; font-size: 15px; font-family: inherit;
+            transition: all 0.2s; background: #fff;
+        }
+        .input-bar input:focus {
+            border-color: #16a34a;
+            box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.08);
+        }
+        .input-bar button {
+            padding: 14px 24px; background: #16a34a; color: #fff;
+            border: none; border-radius: 16px;
+            font-size: 15px; font-weight: 700; cursor: pointer;
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .input-bar button:hover { background: #15803d; transform: translateY(-1px); }
+        .input-bar button:active { transform: translateY(0); }
+        .input-bar button:disabled { background: #86efac; cursor: not-allowed; }
 
-  <style>
-    body { font-family: 'Pretendard', 'Malgun Gothic', sans-serif; }
-  </style>
+        .typing-indicator { display: none; padding: 0 24px 12px; }
+        .typing-indicator.show { display: flex; }
+        .typing-dots {
+            display: flex; gap: 5px; align-items: center;
+            padding: 10px 16px; background: #f1f5f1;
+            border-radius: 20px 20px 20px 4px; margin-left: 40px;
+        }
+        .typing-dots span {
+            width: 6px; height: 6px; background: #94a3b8;
+            border-radius: 50%; animation: dotBounce 1.4s infinite ease-in-out;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .quick-btns {
+            display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
+            padding: 14px 20px; background: #f8faf8; border-bottom: 1px solid #f1f5f1;
+        }
+        .quick-btn {
+            padding: 6px 14px; border: 1.5px solid #e2e8e0; border-radius: 20px;
+            background: #fff; font-size: 13px; font-weight: 600; color: #64748b;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .quick-btn:hover { background: #16a34a; color: #fff; border-color: #16a34a; }
+
+        .footer-text { margin-top: 40px; color: #94a3b8; font-size: 12px; }
+
+        .elapsed-badge {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 8px;
+            background: #dcfce7;
+            color: #166534;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
-  <div id="root"></div>
+<body>
 
-  <script type="text/babel">
-    const { useState, useMemo, useEffect } = React;
+    <div class="main-container">
+        <div class="bot-logo">💰</div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">교육공무직 급여 AI 상담봇</h1>
+        <p class="text-base text-gray-500 leading-relaxed max-w-2xl mx-auto font-medium">
+            교육공무직원의 급여, 수당, 인사, 복무 관련 궁금한 점을 물어보세요.<br class="hidden md:block">
+            관련 규정과 계산 근거를 함께 안내해 드립니다.
+        </p>
 
-    // === 아이콘 SVG ===
-    const Calculator = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16.01" y1="10" y2="10"/><line x1="12" x2="12.01" y1="10" y2="10"/><line x1="8" x2="8.01" y1="10" y2="10"/><line x1="16" x2="16.01" y1="14" y2="14"/><line x1="12" x2="12.01" y1="14" y2="14"/><line x1="8" x2="8.01" y1="14" y2="14"/><line x1="16" x2="16.01" y1="18" y2="18"/><line x1="12" x2="12.01" y1="18" y2="18"/><line x1="8" x2="8.01" y1="18" y2="18"/></svg>;
-    const Calendar = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>;
-    const Info = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
-    const AlertCircle = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>;
-    const ArrowRight = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
-    const ArrowLeft = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>;
-    const CheckCircle2 = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>;
-    const Settings2 = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>;
-    const DollarSign = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
-    const Scale = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>;
-    const Coins = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>;
-    const Umbrella = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 12a10.06 10.06 0 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0"/><path d="M12 2v1"/></svg>;
-    const XCircle = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>;
-    const ExternalLink = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>;
-
-    // 2026년 교원 봉급표 (1~40호봉)
-    const hobongTable = {
-      1: 2041500, 2: 2103300, 3: 2166000, 4: 2228500, 5: 2291500,
-      6: 2354400, 7: 2416600, 8: 2478600, 9: 2495600, 10: 2516700,
-      11: 2538300, 12: 2585900, 13: 2657500, 14: 2773700, 15: 2889700,
-      16: 3006200, 17: 3121000, 18: 3241500, 19: 3361200, 20: 3481000,
-      21: 3600700, 22: 3733600, 23: 3865300, 24: 3997500, 25: 4129400,
-      26: 4261900, 27: 4400100, 28: 4538000, 29: 4682100, 30: 4826800,
-      31: 4971100, 32: 5115200, 33: 5261600, 34: 5407500, 35: 5553600,
-      36: 5699100, 37: 5825700, 38: 5952500, 39: 6079500, 40: 6205700
-    };
-
-    function App() {
-      // === 통합 탭 및 화면 이동 상태 ===
-      const [currentTab, setCurrentTab] = useState('emp_v2026_03'); 
-      const [currentPage, setCurrentPage] = useState('main'); 
-      const [showModal, setShowModal] = useState(false); // 모달 표시 상태
-
-      const isTeacher = currentTab === 'teacher';
-
-      // === 1. 공통 기본조건 ===
-      const [targetDate, setTargetDate] = useState('');      
-      const [monthlyHours, setMonthlyHours] = useState(209); 
-      const [dailyHours, setDailyHours] = useState(8);       
-
-      // === 2. 교육공무직원 상태 ===
-      const [empBasePaySelect, setEmpBasePaySelect] = useState('type2');
-      const [empCustomBasePay, setEmpCustomBasePay] = useState('');
-      const [empHasMealAllowance, setEmpHasMealAllowance] = useState(true);
-      const [empLongevityYears, setEmpLongevityYears] = useState(0);        
-      const [empRiskAllowanceType, setEmpRiskAllowanceType] = useState('none'); 
-      const [empHasHolidayBonus, setEmpHasHolidayBonus] = useState(true);   
-      const [empHolidayAmount, setEmpHolidayAmount] = useState(2144500); 
-      const [empHasDiligenceBonus, setEmpHasDiligenceBonus] = useState(true); 
-
-      // === 3. 기간제교원 상태 ===
-      const [tchHobong, setTchHobong] = useState(10);
-      const [tchResearchLevel, setTchResearchLevel] = useState(60000);
-      const [tchHasHomeroom, setTchHasHomeroom] = useState(false);
-      const [tchHasHeadTeacher, setTchHasHeadTeacher] = useState(false);
-      const [tchSpecialEdType, setTchSpecialEdType] = useState(0);
-      const [tchOtherAdditions, setTchOtherAdditions] = useState(0);
-      const [tchServiceYears, setTchServiceYears] = useState(0); 
-      const [tchPerfRate, setTchPerfRate] = useState(50);        
-      const [tchPerfGrade, setTchPerfGrade] = useState('B');     
-
-      // === 4. 평균임금 전용 항목 (1년치 연간 총액으로 변경) ===
-      const [overtimeAnnual, setOvertimeAnnual] = useState('');     
-      const [unusedLeaveAllowance, setUnusedLeaveAllowance] = useState(''); 
-
-      // === 5. 서브페이지(퇴직금 등) ===
-      const [severanceStartDate, setSeveranceStartDate] = useState(''); 
-      const [severanceEndDate, setSeveranceEndDate] = useState('');     
-      const [accumulatedAmount, setAccumulatedAmount] = useState('');   
-      const [remainLeaveDays, setRemainLeaveDays] = useState('');       
-
-      useEffect(() => {
-        const today = new Date();
-        const formattedToday = today.toISOString().split('T')[0];
-        setTargetDate(formattedToday);
-        setSeveranceEndDate(formattedToday); 
-      }, []);
-
-      const formatNum = (num) => num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : '0';
-      const parseNum = (str) => parseInt(str.toString().replace(/,/g, ''), 10) || 0;
-
-      // 교육공무직 버전 설정
-      const empConfig = useMemo(() => {
-        if (currentTab === 'emp_v2026_03') {
-          return {
-            label: "2026. 3월 이후 기준 (최신)",
-            basePay1: 2344500, basePay2: 2144500, meal: 160000,
-            longevity: 41000, longevityMaxYears: 24,
-            risk: 70000, nutritionistRisk: 120000, revenue: 30000,
-            holiday: 2144500, diligence: 1000000
-          };
-        } else {
-          return {
-            label: "2026. 1~2월 기준 (인상 전)",
-            basePay1: 2266000, basePay2: 2066000, meal: 160000,
-            longevity: 40000, longevityMaxYears: 22,
-            risk: 50000, nutritionistRisk: 0, revenue: 30000,
-            holiday: 2144500, diligence: 1000000
-          };
-        }
-      }, [currentTab]);
-
-      // === 통합 메인 계산 로직 ===
-      const calc = useMemo(() => {
-        let totalDays = 0;
-        let startDateStr = '';
-        let endDateStr = '';
-
-        if (targetDate) {
-          const tDate = new Date(targetDate);
-          const endDate = new Date(tDate);
-          endDate.setDate(endDate.getDate() - 1);
-          
-          const startDate = new Date(tDate);
-          startDate.setMonth(startDate.getMonth() - 3);
-          
-          const diffTime = Math.abs(endDate - startDate) + (1000 * 60 * 60 * 24);
-          totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          startDateStr = startDate.toISOString().split('T')[0];
-          endDateStr = endDate.toISOString().split('T')[0];
-        }
-
-        // 연간 시간외수당 및 연차수당 로직 (12개월로 나누어 1개월치 산출 후 3개월분 반영)
-        const parsedOvertimeAnnual = parseNum(overtimeAnnual);
-        const monthlyOvertime = Math.floor(parsedOvertimeAnnual / 12);
-        const appliedOvertime = monthlyOvertime * 3; // 3개월치 가산액에 합산
-
-        const annualLeavePay = parseNum(unusedLeaveAllowance); 
-        const monthlyLeavePay = isTeacher ? 0 : Math.floor(annualLeavePay / 12);
-        const appliedLeavePay = monthlyLeavePay * 3; // 3개월치 가산액에 합산
-
-        let res = {};
-
-        if (isTeacher) {
-          // --- 기간제교원 로직 ---
-          const basePay = hobongTable[tchHobong] || 0;
-          const teachingAmount = 250000; // 교직수당 고정
-          const mealAllowance = 160000;  // 정액급식비 고정
-          const researchAmount = Number(tchResearchLevel);
-          const homeroomAmount = tchHasHomeroom ? 200000 : 0;
-          const headTeacherAmount = tchHasHeadTeacher ? 150000 : 0;
-          const specialEdAmount = Number(tchSpecialEdType);
-          const otherAddsAmount = Number(tchOtherAdditions);
-          
-          let diligenceRate = 0;
-          if (tchServiceYears >= 9) diligenceRate = 0.5;
-          else if (tchServiceYears === 8) diligenceRate = 0.45;
-          else if (tchServiceYears === 7) diligenceRate = 0.4;
-          else if (tchServiceYears === 6) diligenceRate = 0.35;
-          else if (tchServiceYears === 5) diligenceRate = 0.3;
-          else if (tchServiceYears === 4) diligenceRate = 0.25;
-          else if (tchServiceYears === 3) diligenceRate = 0.2;
-          else if (tchServiceYears === 2) diligenceRate = 0.15;
-          else if (tchServiceYears === 1) diligenceRate = 0.1;
-          
-          let diligenceAddOn = 30000;
-          if (tchServiceYears >= 25) diligenceAddOn = 130000;
-          else if (tchServiceYears >= 20) diligenceAddOn = 110000;
-          else if (tchServiceYears >= 15) diligenceAddOn = 80000;
-          else if (tchServiceYears >= 10) diligenceAddOn = 60000;
-          else if (tchServiceYears >= 5) diligenceAddOn = 50000;
-
-          const monthlyFixedOrdinary = basePay + teachingAmount + mealAllowance + researchAmount + homeroomAmount + headTeacherAmount + specialEdAmount + otherAddsAmount + diligenceAddOn;
-
-          const holidayBonus = Math.floor(basePay * 1.2); 
-          const parsedDiligenceBonus = Math.floor(basePay * diligenceRate) * 2; 
-
-          const perfBonusTable = {
-            50: { S: 3397230, A: 2844840, B: 2430540 },
-            60: { S: 3491140, A: 2828260, B: 2331110 },
-            70: { S: 3585050, A: 2811690, B: 2231680 },
-            80: { S: 3678950, A: 2795120, B: 2132240 },
-            90: { S: 3772860, A: 2778550, B: 2032810 },
-            100: { S: 3866770, A: 2761980, B: 1933380 },
-          };
-          const parsedPerfMin = perfBonusTable[tchPerfRate]['B'];
-          const parsedPerfActual = perfBonusTable[tchPerfRate][tchPerfGrade];
-
-          const annualOrdinaryBonus = holidayBonus + parsedDiligenceBonus + parsedPerfMin;
-          const monthlyAnnualOrdinary = Math.floor(annualOrdinaryBonus / 12);
-          const totalOrdinaryMonthly = monthlyFixedOrdinary + monthlyAnnualOrdinary;
-          const ordinaryHourly = monthlyHours > 0 ? Math.floor(totalOrdinaryMonthly / monthlyHours) : 0;
-          const ordinaryDaily = ordinaryHourly * dailyHours;
-
-          // 3개월 순수 급여액 (월 고정수당액 * 3개월)
-          const actualMonthlyPay = monthlyFixedOrdinary; 
-          const past3MonthsBaseTotal = actualMonthlyPay * 3; 
-          const past3MonthsPay = past3MonthsBaseTotal; // 비고정 수당은 별도 합산
-
-          const proportionedHolidayBonus = Math.floor(holidayBonus * (3 / 12));
-          const proportionedDiligenceBonus = Math.floor(parsedDiligenceBonus * (3 / 12));
-          const proportionedPerfActual = Math.floor(parsedPerfActual * (3 / 12));
-          
-          // 상여 및 1년치 연간 수당의 3개월분 합계
-          const proportionedBonus = proportionedHolidayBonus + proportionedDiligenceBonus + proportionedPerfActual;
-          const totalAveragePayTarget = past3MonthsPay + proportionedBonus + appliedOvertime + appliedLeavePay;
-          
-          const averageDaily = totalDays > 0 ? Math.floor(totalAveragePayTarget / totalDays) : 0;
-          
-          // === [변경사항] 기간제교원은 항상 평균임금을 적용 ===
-          const finalDailyWage = averageDaily;
-          const appliedWageType = finalDailyWage === 0 ? '-' : '평균임금';
-
-          res = {
-            basePay, teachingAmount, mealAllowance, researchAmount, homeroomAmount, headTeacherAmount, specialEdAmount, otherAddsAmount, diligenceAddOn,
-            monthlyFixedOrdinary, monthlyAnnualOrdinary, totalOrdinaryMonthly, ordinaryHourly, ordinaryDaily,
-            actualMonthlyPay, past3MonthsBaseTotal, past3MonthsPay,
-            holidayBonus, parsedDiligenceBonus, parsedPerfMin, parsedPerfActual,
-            proportionedHolidayBonus, proportionedDiligenceBonus, proportionedPerfActual, proportionedBonus, 
-            totalAveragePayTarget, averageDaily, finalDailyWage, appliedWageType
-          };
-
-        } else {
-          // --- 교육공무직원 로직 ---
-          const basePay = empBasePaySelect === 'custom' ? parseNum(empCustomBasePay) : (empBasePaySelect === 'type1' ? empConfig.basePay1 : empConfig.basePay2);
-          const mealAllowance = empHasMealAllowance ? empConfig.meal : 0; 
-          const safeLongevityYears = Math.min(empLongevityYears, empConfig.longevityMaxYears);
-          const longevityAllowance = safeLongevityYears * empConfig.longevity;
-          
-          const cookLicenseAmount = Math.floor((basePay * 0.05) / 10) * 10;
-          const specialEduAmount = (currentTab === 'emp_v2026_03' && empRiskAllowanceType === 'specialEdu') ? 20000 : 0;
-          const riskAmount = empRiskAllowanceType === 'risk' ? empConfig.risk : 0;
-          const cookRiskAmount = empRiskAllowanceType === 'cookRisk' ? (empConfig.risk + cookLicenseAmount) : 0;
-          const nutritionistRiskAmount = (currentTab === 'emp_v2026_03' && empRiskAllowanceType === 'nutritionistRisk') ? empConfig.nutritionistRisk : 0;
-          const revenueAmount = empRiskAllowanceType === 'revenue' ? empConfig.revenue : 0;
-          
-          const totalRiskAllowance = specialEduAmount + riskAmount + cookRiskAmount + nutritionistRiskAmount + revenueAmount;
-          const monthlyFixedOrdinary = basePay + mealAllowance + longevityAllowance + totalRiskAllowance;
-
-          const holidayBonus = empHasHolidayBonus 
-            ? (currentTab === 'emp_v2026_01' ? empHolidayAmount : empConfig.holiday) 
-            : 0; 
-          const parsedDiligenceBonus = empHasDiligenceBonus ? empConfig.diligence : 0; 
-          const annualOrdinaryBonus = holidayBonus + parsedDiligenceBonus;
-          const monthlyAnnualOrdinary = Math.floor(annualOrdinaryBonus / 12);
-
-          const totalOrdinaryMonthly = monthlyFixedOrdinary + monthlyAnnualOrdinary;
-          const ordinaryHourly = monthlyHours > 0 ? Math.floor(totalOrdinaryMonthly / monthlyHours) : 0;
-          const ordinaryDaily = ordinaryHourly * dailyHours;
-
-          // 3개월 순수 급여액 (월 고정수당액 * 3개월)
-          const actualMonthlyPay = monthlyFixedOrdinary; 
-          const past3MonthsBaseTotal = actualMonthlyPay * 3; 
-          const past3MonthsPay = past3MonthsBaseTotal; 
-
-          const proportionedHolidayBonus = Math.floor(holidayBonus * (3 / 12));
-          const proportionedDiligenceBonus = Math.floor(parsedDiligenceBonus * (3 / 12));
-          const proportionedBonus = proportionedHolidayBonus + proportionedDiligenceBonus;
-          
-          // 상여 및 1년치 연간 수당의 3개월분 합계
-          const totalAveragePayTarget = past3MonthsPay + proportionedBonus + appliedOvertime + appliedLeavePay;
-          
-          const averageDaily = totalDays > 0 ? Math.floor(totalAveragePayTarget / totalDays) : 0;
-          
-          // === 교육공무직원은 기존대로 유리한 조건 적용 ===
-          const finalDailyWage = Math.max(ordinaryDaily, averageDaily);
-          const appliedWageType = finalDailyWage === 0 ? '-' : (ordinaryDaily > averageDaily ? '통상임금' : '평균임금');
-
-          res = {
-            basePay, mealAllowance, longevityAllowance, safeLongevityYears,
-            specialEduAmount, riskAmount, cookRiskAmount, nutritionistRiskAmount, revenueAmount, totalRiskAllowance, 
-            monthlyFixedOrdinary, monthlyAnnualOrdinary, totalOrdinaryMonthly, ordinaryHourly, ordinaryDaily,
-            actualMonthlyPay, past3MonthsBaseTotal, past3MonthsPay,
-            holidayBonus, parsedDiligenceBonus,
-            proportionedHolidayBonus, proportionedDiligenceBonus, proportionedBonus, 
-            totalAveragePayTarget, averageDaily, finalDailyWage, appliedWageType
-          };
-        }
-
-        return { ...res, totalDays, startDateStr, endDateStr, parsedOvertimeAnnual, monthlyOvertime, appliedOvertime, annualLeavePay, monthlyLeavePay, appliedLeavePay };
-
-      }, [currentTab, isTeacher, targetDate, monthlyHours, dailyHours, overtimeAnnual, unusedLeaveAllowance,
-          empBasePaySelect, empCustomBasePay, empHasMealAllowance, empLongevityYears, empRiskAllowanceType, empHasHolidayBonus, empHolidayAmount, empHasDiligenceBonus, empConfig,
-          tchHobong, tchResearchLevel, tchHasHomeroom, tchHasHeadTeacher, tchSpecialEdType, tchOtherAdditions, tchServiceYears, tchPerfRate, tchPerfGrade]);
-
-      // === 퇴직금 산출 ===
-      const severanceCalc = useMemo(() => {
-        if (!severanceStartDate || !severanceEndDate) return { totalDays: 0, estimatedSeverance: 0, requiredAmount: 0 };
-        const sDate = new Date(severanceStartDate);
-        const eDate = new Date(severanceEndDate);
-        const diffTime = eDate - sDate;
-        const empTotalDays = diffTime > 0 ? Math.ceil(diffTime / (1000 * 60 * 60 * 24)) : 0;
-
-        const est = Math.floor(calc.finalDailyWage * 30 * (empTotalDays / 365));
-        const acc = parseNum(accumulatedAmount);
-        const req = est - acc;
-
-        return { totalDays: empTotalDays, estimatedSeverance: est > 0 ? est : 0, requiredAmount: req };
-      }, [severanceStartDate, severanceEndDate, calc.finalDailyWage, accumulatedAmount]);
-
-      // === 연차수당 산출 ===
-      const annualLeaveFinalCalc = useMemo(() => {
-        const days = parseFloat(remainLeaveDays) || 0;
-        const est = Math.floor(calc.ordinaryDaily * days);
-        return { estimatedAllowance: est };
-      }, [remainLeaveDays, calc.ordinaryDaily]);
-
-      
-      // === 렌더링 블록: 메인 폼 (교육공무직) ===
-      const renderEmpForm = () => (
-        <>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-blue-50 px-5 py-3 border-b border-blue-100 flex items-center justify-between">
-              <div className="flex items-center">
-                <Settings2 className="w-5 h-5 mr-2 text-blue-600" />
-                <h2 className="text-md font-bold text-blue-900">통상임금 구성 항목 (교육공무직)</h2>
-              </div>
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">통상 & 평균 공통적용</span>
+        <div id="chat-area">
+            <div id="chatBox">
+                <div class="msg-row ai">
+                    <div class="ai-icon">💰</div>
+                    <div class="msg-bubble ai">안녕하세요! 교육공무직 급여 AI 상담봇 셀팝이입니다. 급여, 수당, 인사, 복무 등 궁금한 점을 편하게 물어보세요 😊</div>
+                </div>
             </div>
-            
-            <div className="p-5 space-y-5">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start">
-                <Scale className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <strong>판례 반영:</strong> 명절휴가비와 정근수당이 <strong>통상임금</strong>에 산입되었습니다. (연간 총액의 1/12을 합산)
+
+            <div class="typing-indicator" id="loading">
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">기본급 (직종별)</label>
-                <select value={empBasePaySelect} onChange={(e) => setEmpBasePaySelect(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-2">
-                  <option value="type1">유형 1 (월 {formatNum(empConfig.basePay1)}원)</option>
-                  <option value="type2">유형 2 (월 {formatNum(empConfig.basePay2)}원)</option>
-                  <option value="custom">직접 입력</option>
-                </select>
-                {empBasePaySelect === 'custom' && (
-                  <input type="text" value={empCustomBasePay} onChange={(e) => setEmpCustomBasePay(e.target.value)}
-                    placeholder="기본급을 입력하세요 (원)" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-right" />
-                )}
-              </div>
-
-              <div className="h-px bg-gray-100"></div>
-
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-800">월 고정수당 선택</label>
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" checked={empHasMealAllowance} onChange={(e) => setEmpHasMealAllowance(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  <div className="ml-3 flex-1 flex justify-between">
-                    <span className="text-gray-800 font-medium">정액급식비</span>
-                    <span className="text-gray-600">월 {formatNum(empConfig.meal)}원</span>
-                  </div>
-                </label>
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg bg-white">
-                  <div className="flex-1">
-                    <span className="text-gray-800 font-medium block">근속수당</span>
-                    <span className="text-xs text-gray-500">1년당 {formatNum(empConfig.longevity/10000)}만원 (상한 {empConfig.longevityMaxYears}년, {formatNum(empConfig.longevity * empConfig.longevityMaxYears)}원)</span>
-                  </div>
-                  <select value={Math.min(empLongevityYears, empConfig.longevityMaxYears)} onChange={(e) => setEmpLongevityYears(Number(e.target.value))}
-                    className="w-32 px-2 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 text-sm">
-                    <option value={0}>해당없음 (1년 미만)</option>
-                    {[...Array(empConfig.longevityMaxYears)].map((_, i) => (
-                      <option key={i+1} value={i+1}>{i+1}년차 ({formatNum((i+1)*empConfig.longevity)}원)</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="p-3 border border-gray-200 rounded-lg bg-white">
-                  <span className="text-gray-800 font-medium block mb-3">특수/위험업무 수당 <span className="text-blue-600 text-xs">(단일 선택)</span></span>
-                  <div className="space-y-2">
-                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="radio" checked={empRiskAllowanceType === 'none'} onChange={() => setEmpRiskAllowanceType('none')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                      <span className="ml-2 text-sm text-gray-700 flex-1">해당 없음</span>
-                    </label>
-                    {currentTab === 'emp_v2026_03' && (
-                      <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                        <input type="radio" checked={empRiskAllowanceType === 'specialEdu'} onChange={() => setEmpRiskAllowanceType('specialEdu')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                        <span className="ml-2 text-sm text-gray-700 flex-1">특수교육지원수당 <span className="text-gray-400 text-[11px] hidden sm:inline">(특수교육지도사)</span></span>
-                        <span className="text-sm text-gray-600">20,000원</span>
-                      </label>
-                    )}
-                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="radio" checked={empRiskAllowanceType === 'risk'} onChange={() => setEmpRiskAllowanceType('risk')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                      <span className="ml-2 text-sm text-gray-700 flex-1">위험수당 <span className="text-gray-400 text-[11px] hidden sm:inline">({currentTab === 'emp_v2026_03' ? '조리실무사' : '영양사, 조리실무사'})</span></span>
-                      <span className="text-sm text-gray-600">{formatNum(empConfig.risk)}원</span>
-                    </label>
-                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="radio" checked={empRiskAllowanceType === 'cookRisk'} onChange={() => setEmpRiskAllowanceType('cookRisk')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                      <span className="ml-2 text-sm text-gray-700 flex-1">위험+조리사면허수당 <span className="text-gray-400 text-[11px] hidden sm:inline">(조리사)</span></span>
-                      <span className="text-sm text-gray-600">{formatNum(empConfig.risk + Math.floor((calc.basePay * 0.05)/10)*10)}원</span>
-                    </label>
-                    {currentTab === 'emp_v2026_03' && (
-                      <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                        <input type="radio" checked={empRiskAllowanceType === 'nutritionistRisk'} onChange={() => setEmpRiskAllowanceType('nutritionistRisk')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                        <span className="ml-2 text-sm text-gray-700 flex-1">위험수당+식생활지도 <span className="text-gray-400 text-[11px] hidden sm:inline">(영양사)</span></span>
-                        <span className="text-sm text-gray-600">{formatNum(empConfig.nutritionistRisk)}원</span>
-                      </label>
-                    )}
-                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                      <input type="radio" checked={empRiskAllowanceType === 'revenue'} onChange={() => setEmpRiskAllowanceType('revenue')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                      <span className="ml-2 text-sm text-gray-700 flex-1">세입수당 <span className="text-gray-400 text-[11px] hidden sm:inline">(행정실무사)</span></span>
-                      <span className="text-sm text-gray-600">{formatNum(empConfig.revenue)}원</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-px bg-gray-100"></div>
-
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-800">연간 수당</label>
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" checked={empHasHolidayBonus} onChange={(e) => setEmpHasHolidayBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0" />
-                  <div className="ml-3 flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                    <span className="text-gray-800 font-medium">명절휴가비</span>
-                    {currentTab === 'emp_v2026_01' ? (
-                      <select 
-                        value={empHolidayAmount} 
-                        onChange={(e) => setEmpHolidayAmount(Number(e.target.value))}
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-2 py-1.5 border border-gray-300 rounded focus:ring-blue-500 text-sm text-gray-700 bg-white"
-                      >
-                        <option value={2144500}>연 2,144,500원</option>
-                        <option value={1850000}>연 1,850,000원 (1월 초근 통상임금 계산용)</option>
-                      </select>
-                    ) : (
-                      <span className="text-gray-600 text-sm">연 {formatNum(empConfig.holiday)}원</span>
-                    )}
-                  </div>
-                </label>
-                <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" checked={empHasDiligenceBonus} onChange={(e) => setEmpHasDiligenceBonus(e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0" />
-                  <div className="ml-3 flex-1 flex justify-between items-center">
-                    <span className="text-gray-800 font-medium block">정근수당</span>
-                    <span className="text-gray-600 text-sm">연 {formatNum(empConfig.diligence)}원</span>
-                  </div>
-                </label>
-              </div>
             </div>
-          </div>
-        </>
-      );
 
-      // === 렌더링 블록: 메인 폼 (기간제교원) ===
-      const renderTeacherForm = () => (
-        <>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-emerald-50 px-5 py-3 border-b border-emerald-100 flex items-center justify-between">
-              <div className="flex items-center">
-                <Settings2 className="w-5 h-5 mr-2 text-emerald-600" />
-                <h2 className="text-md font-bold text-emerald-900">통상임금 구성 항목 (기간제교원)</h2>
-              </div>
-              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-medium">통상 & 평균 공통적용</span>
+            <div class="input-bar">
+                <input type="text" id="userInput" placeholder="급여 관련 궁금한 점을 입력하세요..." autocomplete="off">
+                <button onclick="sendMessage()" id="sendBtn">전송</button>
             </div>
-            
-            <div className="p-5 space-y-5">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start">
-                <Scale className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-yellow-800">
-                  <strong>노동부 지침 반영:</strong> 명절휴가비와 성과상여금(최소등급액)이 <strong>통상임금</strong>에 산입되었습니다.
-                </div>
-              </div>
-
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">기본급 (호봉 선택)</label>
-                  <select value={tchHobong} onChange={(e) => setTchHobong(Number(e.target.value))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
-                    {[...Array(40)].map((_, i) => (
-                      <option key={i+1} value={i+1}>{i+1}호봉 ({formatNum(hobongTable[i+1])}원)</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="text-sm text-gray-500 pb-2">2026년 교원 기준</div>
-              </div>
-
-              <div className="h-px bg-gray-100"></div>
-
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-800">월 고정수당 선택</label>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label className="flex items-center p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed opacity-80">
-                    <input type="checkbox" checked={true} readOnly disabled className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" />
-                    <div className="ml-3 flex-1 flex justify-between">
-                      <span className="text-gray-800 font-medium">교직수당 (기본)</span>
-                      <span className="text-gray-600">250,000원</span>
-                    </div>
-                  </label>
-                  <label className="flex items-center p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed opacity-80">
-                    <input type="checkbox" checked={true} readOnly disabled className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" />
-                    <div className="ml-3 flex-1 flex justify-between">
-                      <span className="text-gray-800 font-medium">정액급식비 (기본)</span>
-                      <span className="text-gray-600">160,000원</span>
-                    </div>
-                  </label>
-                </div>
-
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg bg-white">
-                  <span className="text-gray-800 font-medium mr-4">교원연구비</span>
-                  <select value={tchResearchLevel} onChange={(e) => setTchResearchLevel(Number(e.target.value))} className="flex-1 px-2 py-1.5 border border-gray-300 rounded-md focus:ring-emerald-500 text-sm">
-                    <option value={75000}>5년 미만 (75,000원)</option>
-                    <option value={60000}>5년 이상 (60,000원)</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={tchHasHomeroom} onChange={(e) => setTchHasHomeroom(e.target.checked)} className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" />
-                    <div className="ml-3 flex-1 flex justify-between">
-                      <span className="text-gray-800 font-medium">담임수당</span>
-                      <span className="text-gray-600">200,000원</span>
-                    </div>
-                  </label>
-                  <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="checkbox" checked={tchHasHeadTeacher} onChange={(e) => setTchHasHeadTeacher(e.target.checked)} className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" />
-                    <div className="ml-3 flex-1 flex justify-between">
-                      <span className="text-gray-800 font-medium">보직수당</span>
-                      <span className="text-gray-600">150,000원</span>
-                    </div>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-center p-2 border border-gray-200 rounded-lg bg-white">
-                    <span className="text-sm text-gray-800 font-medium ml-1 mr-2">특수업무</span>
-                    <select value={tchSpecialEdType} onChange={(e) => setTchSpecialEdType(Number(e.target.value))} className="flex-1 px-1 py-1 border border-gray-300 rounded focus:ring-emerald-500 text-sm">
-                      <option value={0}>해당없음</option><option value={70000}>특수학급 (7만)</option><option value={120000}>특수학교 (12만)</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center p-2 border border-gray-200 rounded-lg bg-white">
-                    <span className="text-sm text-gray-800 font-medium ml-1 mr-2">기타가산</span>
-                    <select value={tchOtherAdditions} onChange={(e) => setTchOtherAdditions(Number(e.target.value))} className="flex-1 px-1 py-1 border border-gray-300 rounded focus:ring-emerald-500 text-sm">
-                      <option value={0}>해당없음</option><option value={40000}>보건/영양 (4만)</option><option value={30000}>사서/상담 (3만)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-px bg-gray-100"></div>
-
-              <div className="space-y-4">
-                <label className="block text-sm font-semibold text-gray-800">연간 수당 (통상임금용 합산분)</label>
-                
-                <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-gray-800 font-medium">명절휴가비 (자동계산)</span>
-                    <span className="text-emerald-700 font-bold">연 {formatNum(calc.holidayBonus)}원</span>
-                  </div>
-                  <p className="text-xs text-gray-500">※ 기본급의 60% × 2회</p>
-                </div>
-
-                <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
-                  <div className="flex flex-col flex-1">
-                    <span className="text-gray-800 font-medium">정근수당 및 가산금</span>
-                    <span className="text-xs text-emerald-600 mt-1">※ 근무연수 선택 (자동계산)</span>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <select value={tchServiceYears} onChange={(e) => setTchServiceYears(Number(e.target.value))} className="w-44 px-2 py-1.5 border border-gray-300 rounded focus:ring-emerald-500 text-sm">
-                      <option value={0}>1년 미만</option>
-                      <option value={1}>1년 이상 ~ 2년 미만</option>
-                      <option value={2}>2년 이상 ~ 3년 미만</option>
-                      <option value={3}>3년 이상 ~ 4년 미만</option>
-                      <option value={4}>4년 이상 ~ 5년 미만</option>
-                      <option value={5}>5년 이상 ~ 6년 미만</option>
-                      <option value={6}>6년 이상 ~ 7년 미만</option>
-                      <option value={7}>7년 이상 ~ 8년 미만</option>
-                      <option value={8}>8년 이상 ~ 9년 미만</option>
-                      <option value={9}>9년 이상 ~ 10년 미만</option>
-                      <option value={10}>10년 이상 ~ 15년 미만</option>
-                      <option value={15}>15년 이상 ~ 20년 미만</option>
-                      <option value={20}>20년 이상 ~ 25년 미만</option>
-                      <option value={25}>25년 이상</option>
-                    </select>
-                    <div className="text-[11px] text-gray-500 text-right mt-1">
-                      연 정근수당: <span className="font-semibold text-emerald-700">{formatNum(calc.parsedDiligenceBonus)}원</span><br/>
-                      월 정근가산금: <span className="font-semibold text-emerald-700">{formatNum(calc.diligenceAddOn)}원</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
-                  <div className="flex flex-col">
-                    <span className="text-gray-800 font-medium">성과상여금</span>
-                    <span className="text-xs text-emerald-600 mt-1">※ 지급률 및 평가등급 선택</span>
-                  </div>
-                  <div className="flex flex-col gap-2 items-end">
-                    <div className="flex gap-2">
-                      <select value={tchPerfRate} onChange={(e) => setTchPerfRate(Number(e.target.value))} className="px-2 py-1.5 border border-gray-300 rounded focus:ring-emerald-500 text-sm">
-                        <option value={50}>지급률 50%</option>
-                        <option value={60}>지급률 60%</option>
-                        <option value={70}>지급률 70%</option>
-                        <option value={80}>지급률 80%</option>
-                        <option value={90}>지급률 90%</option>
-                        <option value={100}>지급률 100%</option>
-                      </select>
-                      <select value={tchPerfGrade} onChange={(e) => setTchPerfGrade(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded focus:ring-emerald-500 text-sm">
-                        <option value="S">S등급</option>
-                        <option value="A">A등급</option>
-                        <option value="B">B등급</option>
-                      </select>
-                    </div>
-                    <div className="text-[11px] text-gray-500 text-right mt-1">
-                      통상임금(B등급 산입): <span className="font-semibold text-gray-700">{formatNum(calc.parsedPerfMin)}원</span><br/>
-                      평균임금({tchPerfGrade}등급 산입): <span className="font-semibold text-gray-700">{formatNum(calc.parsedPerfActual)}원</span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </>
-      );
-
-      // === 렌더링 블록: 결과상세 (교육공무직) ===
-      const renderEmpResultDetails = () => (
-        <>
-          <div className={`p-4 rounded-lg border-2 ${calc.appliedWageType === '통상임금' ? 'border-blue-400 bg-blue-50/50' : 'border-transparent bg-gray-50'}`}>
-            <div className="flex justify-between items-end mb-3 border-b border-gray-200 pb-2">
-              <span className="font-bold text-gray-800">통상임금 (1일)</span>
-              <span className={`text-xl font-bold ${calc.appliedWageType === '통상임금' ? 'text-blue-700' : 'text-gray-700'}`}>{formatNum(calc.ordinaryDaily)} 원</span>
-            </div>
-            <div className="text-xs text-gray-600">
-              <div className="flex justify-between text-gray-800 font-medium"><span>월 고정 지급액 합계</span><span>{formatNum(calc.monthlyFixedOrdinary)} 원</span></div>
-              <div className="pl-3 space-y-1 mt-1 mb-3 border-l-2 border-gray-200">
-                <div className="flex justify-between text-gray-500"><span>└ 기본급</span><span>{formatNum(calc.basePay)} 원</span></div>
-                {calc.mealAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 정액급식비</span><span>{formatNum(calc.mealAllowance)} 원</span></div>}
-                {calc.longevityAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 근속수당</span><span>{formatNum(calc.longevityAllowance)} 원</span></div>}
-                {calc.specialEduAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 특수교육지원수당</span><span>{formatNum(calc.specialEduAmount)} 원</span></div>}
-                {calc.riskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당</span><span>{formatNum(calc.riskAmount)} 원</span></div>}
-                {calc.cookRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험+면허수당(조리사)</span><span>{formatNum(calc.cookRiskAmount)} 원</span></div>}
-                {calc.nutritionistRiskAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 위험수당+식생활</span><span>{formatNum(calc.nutritionistRiskAmount)} 원</span></div>}
-                {calc.revenueAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 세입수당</span><span>{formatNum(calc.revenueAmount)} 원</span></div>}
-              </div>
-              {calc.monthlyAnnualOrdinary > 0 && (
-                <div className="flex justify-between text-blue-600 font-medium bg-blue-50 p-1 rounded mb-2">
-                  <span title="명절휴가비, 정근수당 연간 총액의 1/12">└ 상여 합산액 월 환산분</span><span>+ {formatNum(calc.monthlyAnnualOrdinary)} 원</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-gray-700 pt-1 border-t border-gray-200"><span>최종 월 통상임금 합계</span><span>{formatNum(calc.totalOrdinaryMonthly)} 원</span></div>
-              <div className="flex justify-between border-t border-gray-200 pt-1 mt-1"><span>통상 시급</span><span>{formatNum(calc.ordinaryHourly)} 원</span></div>
-            </div>
-          </div>
-
-          <div className="flex justify-center -my-2"><ArrowRight className="w-5 h-5 text-gray-300 rotate-90 lg:rotate-0" /></div>
-
-          <div className={`p-4 rounded-lg border-2 ${calc.appliedWageType === '평균임금' ? 'border-purple-400 bg-purple-50/50' : 'border-transparent bg-gray-50'}`}>
-            <div className="flex justify-between items-end mb-3 border-b border-gray-200 pb-2">
-              <span className="font-bold text-gray-800">평균임금 (1일)</span>
-              <span className={`text-xl font-bold ${calc.appliedWageType === '평균임금' ? 'text-purple-700' : 'text-gray-700'}`}>{formatNum(calc.averageDaily)} 원</span>
-            </div>
-            <div className="text-xs text-gray-600">
-              <div className="flex justify-between text-gray-500 mb-2"><span>산정 기준일수</span><span>{calc.totalDays} 일</span></div>
-              <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (자동산출)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
-              <div className="pl-3 space-y-1 mt-1 mb-2 border-l-2 border-gray-200">
-                <div className="flex justify-between text-gray-500"><span>└ 기본급 및 고정수당 (3개월분)</span><span>{formatNum(calc.monthlyFixedOrdinary * 3)} 원</span></div>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 및 비고정수당 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus + calc.appliedOvertime + calc.appliedLeavePay)} 원</span></div>
-              {calc.proportionedHolidayBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 명절휴가비 (3개월치)</span><span>{formatNum(calc.proportionedHolidayBonus)} 원</span></div>}
-              {calc.proportionedDiligenceBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 정근수당 (3개월치)</span><span>{formatNum(calc.proportionedDiligenceBonus)} 원</span></div>}
-              {calc.appliedOvertime > 0 && <div className="flex justify-between text-gray-400 ml-2"><span title="연간총액 ÷ 12개월 × 3개월">└ 시간외수당 (1년치 수당 ÷ 12개월 × 3개월)</span><span>{formatNum(calc.appliedOvertime)} 원</span></div>}
-              {calc.appliedLeavePay > 0 && <div className="flex justify-between text-gray-400 ml-2"><span title="연간총액 ÷ 12개월 × 3개월">└ 연차수당 (1년치 수당 ÷ 12개월 × 3개월)</span><span>{formatNum(calc.appliedLeavePay)} 원</span></div>}
-              
-              <div className="flex justify-between border-t border-gray-200 pt-2 mt-2 font-bold text-gray-700"><span>최종 산정 임금총액</span><span>{formatNum(calc.totalAveragePayTarget)} 원</span></div>
-            </div>
-          </div>
-        </>
-      );
-
-      // === 렌더링 블록: 결과상세 (기간제교원) ===
-      const renderTeacherResultDetails = () => (
-        <>
-          <div className={`p-4 rounded-lg border-2 ${calc.appliedWageType === '통상임금' ? 'border-emerald-400 bg-emerald-50/50' : 'border-transparent bg-gray-50'}`}>
-            <div className="flex justify-between items-end mb-3 border-b border-gray-200 pb-2">
-              <span className="font-bold text-gray-800">통상임금 (1일)</span>
-              <span className={`text-xl font-bold ${calc.appliedWageType === '통상임금' ? 'text-emerald-700' : 'text-gray-700'}`}>{formatNum(calc.ordinaryDaily)} 원</span>
-            </div>
-            <div className="text-xs text-gray-600">
-              <div className="flex justify-between text-gray-800 font-medium"><span>월 고정 지급액 합계</span><span>{formatNum(calc.monthlyFixedOrdinary)} 원</span></div>
-              <div className="pl-3 space-y-1 mt-1 mb-3 border-l-2 border-gray-200">
-                <div className="flex justify-between text-gray-500"><span>└ 기본급 ({tchHobong}호봉)</span><span>{formatNum(calc.basePay)} 원</span></div>
-                {calc.teachingAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 교직수당</span><span>{formatNum(calc.teachingAmount)} 원</span></div>}
-                {calc.mealAllowance > 0 && <div className="flex justify-between text-gray-500"><span>└ 정액급식비</span><span>{formatNum(calc.mealAllowance)} 원</span></div>}
-                {calc.researchAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 교원연구비</span><span>{formatNum(calc.researchAmount)} 원</span></div>}
-                {calc.homeroomAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 담임업무 수당</span><span>{formatNum(calc.homeroomAmount)} 원</span></div>}
-                {calc.headTeacherAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 보직업무 수당</span><span>{formatNum(calc.headTeacherAmount)} 원</span></div>}
-                {calc.specialEdAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 특수업무 수당</span><span>{formatNum(calc.specialEdAmount)} 원</span></div>}
-                {calc.otherAddsAmount > 0 && <div className="flex justify-between text-gray-500"><span>└ 기타 가산금</span><span>{formatNum(calc.otherAddsAmount)} 원</span></div>}
-                {calc.diligenceAddOn > 0 && <div className="flex justify-between text-emerald-600 font-medium"><span>└ 정근수당 가산금</span><span>{formatNum(calc.diligenceAddOn)} 원</span></div>}
-              </div>
-              {calc.monthlyAnnualOrdinary > 0 && (
-                <div className="flex justify-between text-emerald-600 font-medium bg-emerald-50 p-1 rounded mb-2">
-                  <span title="명절/정근/성과(최소) 연간총액의 1/12">└ 상여 합산액 월 환산분</span><span>+ {formatNum(calc.monthlyAnnualOrdinary)} 원</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-gray-700 pt-1 border-t border-gray-200"><span>최종 월 통상임금 합계</span><span>{formatNum(calc.totalOrdinaryMonthly)} 원</span></div>
-              <div className="flex justify-between border-t border-gray-200 pt-1 mt-1"><span>통상 시급</span><span>{formatNum(calc.ordinaryHourly)} 원</span></div>
-            </div>
-          </div>
-
-          <div className="flex justify-center -my-2"><ArrowRight className="w-5 h-5 text-gray-300 rotate-90 lg:rotate-0" /></div>
-
-          <div className={`p-4 rounded-lg border-2 ${calc.appliedWageType === '평균임금' ? 'border-purple-400 bg-purple-50/50' : 'border-transparent bg-gray-50'}`}>
-            <div className="flex justify-between items-end mb-3 border-b border-gray-200 pb-2">
-              <span className="font-bold text-gray-800">평균임금 (1일)</span>
-              <span className={`text-xl font-bold ${calc.appliedWageType === '평균임금' ? 'text-purple-700' : 'text-gray-700'}`}>{formatNum(calc.averageDaily)} 원</span>
-            </div>
-            <div className="text-xs text-gray-600">
-              <div className="flex justify-between text-gray-500 mb-2"><span>산정 기준일수</span><span>{calc.totalDays} 일</span></div>
-              <div className="flex justify-between font-medium text-gray-800"><span>3개월 순수 급여액 (자동산출)</span><span>{formatNum(calc.past3MonthsPay)} 원</span></div>
-              <div className="pl-3 space-y-1 mt-1 mb-2 border-l-2 border-gray-200">
-                <div className="flex justify-between text-gray-500"><span>└ 기본급 및 월수당 (3개월분)</span><span>{formatNum(calc.monthlyFixedOrdinary * 3)} 원</span></div>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-gray-100 mt-1 font-medium text-gray-800"><span>상여 및 비고정수당 가산액 (3개월치)</span><span>+ {formatNum(calc.proportionedBonus + calc.appliedOvertime)} 원</span></div>
-              {calc.proportionedHolidayBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 명절휴가비 (3개월치)</span><span>{formatNum(calc.proportionedHolidayBonus)} 원</span></div>}
-              {calc.proportionedDiligenceBonus > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 정근수당 (3개월치)</span><span>{formatNum(calc.proportionedDiligenceBonus)} 원</span></div>}
-              {calc.proportionedPerfActual > 0 && <div className="flex justify-between text-gray-400 ml-2"><span>└ 성과상여금-실제 (3개월치)</span><span>{formatNum(calc.proportionedPerfActual)} 원</span></div>}
-              {calc.appliedOvertime > 0 && <div className="flex justify-between text-gray-400 ml-2"><span title="연간총액 ÷ 12개월 × 3개월">└ 시간외수당 (1년치 수당 ÷ 12개월 × 3개월)</span><span>{formatNum(calc.appliedOvertime)} 원</span></div>}
-              
-              <div className="flex justify-between border-t border-gray-200 pt-2 mt-2 font-bold text-gray-700"><span>최종 산정 임금총액</span><span>{formatNum(calc.totalAveragePayTarget)} 원</span></div>
-            </div>
-          </div>
-        </>
-      );
-
-      // === 렌더링: 메인 페이지 ===
-      const renderMainPage = () => {
-        const themeColor = isTeacher ? 'text-emerald-700' : 'text-blue-700';
-        const cardBgColor = isTeacher ? 'bg-emerald-600 border-emerald-700' : 'bg-blue-600 border-blue-700';
-        const btnTextColor = isTeacher ? 'text-emerald-700 hover:bg-emerald-50' : 'text-blue-700 hover:bg-blue-50';
-
-        return (
-          <div className="py-8 px-4 sm:px-6 lg:px-8 pb-20">
-            <div className="max-w-6xl mx-auto space-y-6">
-              
-              {/* 타이틀 헤더 */}
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between">
-                  <div className={`flex items-center space-x-3 mb-2 sm:mb-0 ${themeColor}`}>
-                    <Calculator className="w-8 h-8" />
-                    <h1 className="text-2xl font-bold tracking-tight">
-                      교육공무직 및 기간제교원 통상·평균임금 계산기 (by손셀파)
-                    </h1>
-                  </div>
-                </div>
-                <p className="text-gray-600 sm:ml-11 mt-2 leading-relaxed">
-                  {isTeacher 
-                    ? <>근로기준법, 근로자퇴직급여보장법, 공무원 보수규정, 공무원 수당등에 관한 규정을 종합적으로 검토한 바, 기간제교원 퇴직금은 <strong>평균임금</strong>에 기초하여 산정하는게 타당하다고 판단되어 <strong>평균임금으로 적용</strong>하되, 통상임금은 참고할수있도록 현출하였습니다.</>
-                    : <>근로기준법 및 선택한 시기의 임금협약 기준액을 반영하여 더 유리한 임금을 최종 적용해 드립니다.<br className="hidden sm:block"/>원하시는 기준 시점을 아래 탭에서 선택해 주세요.</>
-                  }
-                </p>
-              </div>
-
-              {/* 3단 통합 탭 */}
-              <div className="flex bg-gray-200/80 p-1.5 rounded-xl shadow-inner max-w-3xl mx-auto overflow-x-auto">
-                <button onClick={() => {
-                    setCurrentTab('emp_v2026_03');
-                  }}
-                  className={`flex-shrink-0 min-w-[120px] flex-1 py-3 px-2 rounded-lg font-bold text-sm sm:text-[15px] transition-all duration-200 ${currentTab === 'emp_v2026_03' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-300/50'}`}>
-                  공무직 '26.3월~(최신)
-                </button>
-                <button onClick={() => {
-                    setCurrentTab('emp_v2026_01');
-                    if(empRiskAllowanceType === 'specialEdu' || empRiskAllowanceType === 'nutritionistRisk') {
-                      setEmpRiskAllowanceType('none');
-                    }
-                  }}
-                  className={`flex-shrink-0 min-w-[120px] flex-1 py-3 px-2 rounded-lg font-bold text-sm sm:text-[15px] transition-all duration-200 ${currentTab === 'emp_v2026_01' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-300/50'}`}>
-                  공무직 '26.1~2월(전)
-                </button>
-                <button onClick={() => setCurrentTab('teacher')}
-                  className={`flex-shrink-0 min-w-[100px] flex-1 py-3 px-2 rounded-lg font-bold text-sm sm:text-[15px] transition-all duration-200 ${currentTab === 'teacher' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-300/50'}`}>
-                  기간제교원
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
-                {/* 좌측: 조건 선택 폼 */}
-                <div className="lg:col-span-7 space-y-6">
-                  
-                  {/* 공통: 기본 산정 기준 */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-gray-50 px-5 py-3 border-b border-gray-200 flex items-center">
-                      <Calendar className="w-5 h-5 mr-2 text-gray-500" />
-                      <h2 className="text-md font-bold text-gray-800">기본 산정 기준</h2>
-                    </div>
-                    <div className="p-5 grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">사유발생일 (퇴직일 등)</label>
-                        <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-opacity-50 ${isTeacher ? 'focus:ring-emerald-500' : 'focus:ring-blue-500'}`} />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">월 소정근로 (시간)</label>
-                        <input type="number" value={monthlyHours} onChange={(e) => setMonthlyHours(Number(e.target.value))}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-opacity-50 bg-gray-50 ${isTeacher ? 'focus:ring-emerald-500' : 'focus:ring-blue-500'}`} />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">1일 근로 (시간)</label>
-                        <input type="number" value={dailyHours} onChange={(e) => setDailyHours(Number(e.target.value))}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-opacity-50 bg-gray-50 ${isTeacher ? 'focus:ring-emerald-500' : 'focus:ring-blue-500'}`} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 탭에 따른 폼 렌더링 */}
-                  {isTeacher ? renderTeacherForm() : renderEmpForm()}
-
-                  {/* 공통: 평균임금 전용 항목 */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-purple-50 px-5 py-3 border-b border-purple-100 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <DollarSign className="w-5 h-5 mr-2 text-purple-600" />
-                        <h2 className="text-md font-bold text-purple-900">평균임금 산정 전용 항목</h2>
-                      </div>
-                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">평균임금에만 적용</span>
-                    </div>
-                    
-                    <div className="p-5 space-y-6">
-
-                      <div className={`grid grid-cols-1 ${!isTeacher ? 'md:grid-cols-2' : ''} gap-4`}>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-800 mb-1">연간 시간외수당 총액 (1년치)</label>
-                          <input type="text" value={formatNum(overtimeAnnual)} onChange={(e) => setOvertimeAnnual(e.target.value.replace(/,/g, ''))}
-                            placeholder="1년간 수령한 총액 (원)" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-right text-sm" />
-                        </div>
-                        {!isTeacher && (
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-800 mb-1">연차유급휴가 미사용수당 총액 (1년치)</label>
-                            <input type="text" value={formatNum(unusedLeaveAllowance)} onChange={(e) => setUnusedLeaveAllowance(e.target.value.replace(/,/g, ''))}
-                              placeholder="1년간 수령한 총액 (원)" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-right text-sm" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 우측: 계산 결과 화면 */}
-                <div className="lg:col-span-5 space-y-6">
-                  
-                  {/* 결과 통합 카드 */}
-                  <div className={`rounded-xl shadow-lg p-6 border-2 transition-all ${calc.finalDailyWage > 0 ? cardBgColor : 'bg-gray-100 border-gray-200'}`}>
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className={`text-lg font-bold flex items-center ${calc.finalDailyWage > 0 ? 'text-white' : 'text-gray-500'}`}>
-                        <CheckCircle2 className="w-5 h-5 mr-2 opacity-80" />
-                        최종 적용 1일 임금
-                      </h2>
-                      <span className={`text-[10px] px-2 py-1 rounded font-bold ${calc.finalDailyWage > 0 ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                        {isTeacher ? '기간제교원' : empConfig.label}
-                      </span>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg p-5 shadow-inner mb-4">
-                      <div className="text-center">
-                        <span className="block text-sm text-gray-500 font-medium mb-1">
-                          {calc.appliedWageType === '-' ? '입력 대기중' : (isTeacher ? `적용 기준: ${calc.appliedWageType} 적용` : `유리한 조건: ${calc.appliedWageType} 적용`)}
-                        </span>
-                        <span className="block text-4xl font-extrabold text-gray-900 tracking-tight">
-                          {formatNum(calc.finalDailyWage)}<span className="text-xl text-gray-500 font-medium ml-1">원</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white/15 border border-white/20 text-white text-sm p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 leading-relaxed mb-5">
-                      <div className="flex items-start flex-1">
-                        <AlertCircle className={`w-5 h-5 mr-2 flex-shrink-0 mt-0.5 ${isTeacher ? 'text-yellow-300' : 'opacity-80'}`} />
-                        {isTeacher ? (
-                          <p>기간제교원 퇴직금은 <strong className="text-yellow-300 font-extrabold text-base">평균임금</strong> 산정액을 최종 1일 임금으로 적용합니다.</p>
-                        ) : (
-                          <p>근로기준법 제2조 제2항에 따라 평균임금이 통상임금보다 적으면 <strong>통상임금을 평균임금으로 적용</strong>합니다.</p>
-                        )}
-                      </div>
-                      {isTeacher && (
-                        <button 
-                          onClick={() => setShowModal(true)}
-                          className="flex items-center justify-center whitespace-nowrap bg-white text-emerald-800 font-extrabold px-5 py-2.5 rounded-full shadow-lg hover:bg-emerald-50 hover:scale-105 transition-all active:scale-95 w-full sm:w-auto"
-                        >
-                          <Info className="w-5 h-5 mr-1.5 text-emerald-600" />
-                          <span>적용 근거 확인</span>
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <button onClick={() => setCurrentPage('severance')} 
-                        className={`flex-1 font-bold py-2.5 px-2 rounded-lg flex justify-center items-center text-sm transition-colors shadow-sm ${calc.finalDailyWage > 0 ? `bg-white ${btnTextColor}` : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>
-                        <Coins className="w-4 h-4 mr-1.5 opacity-80" /> 퇴직금 소요액 <ArrowRight className="w-4 h-4 ml-1 opacity-70" />
-                      </button>
-                      {!isTeacher && (
-                        <button onClick={() => setCurrentPage('annualLeave')} 
-                          className={`flex-1 font-bold py-2.5 px-2 rounded-lg flex justify-center items-center text-sm transition-colors shadow-sm ${calc.finalDailyWage > 0 ? `bg-white ${btnTextColor}` : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}>
-                          <Umbrella className="w-4 h-4 mr-1.5 opacity-80" /> 연차수당 <ArrowRight className="w-4 h-4 ml-1 opacity-70" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <h3 className="bg-gray-50 px-5 py-3 text-sm font-bold text-gray-800 border-b">항목별 산출 상세 내역</h3>
-                    <div className="p-5 space-y-5">
-                      {isTeacher ? renderTeacherResultDetails() : renderEmpResultDetails()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* 법리 검토 팝업 모달 */}
-            {showModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowModal(false)}>
-                <div 
-                  className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                    <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                      <Info className="w-5 h-5 text-emerald-600 mr-2" />
-                      기간제교원 퇴직금 산정 기준에 관한 법리 검토
-                    </h3>
-                    <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-700 transition-colors">
-                      <XCircle className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <div className="p-6 text-sm text-gray-700 space-y-6 leading-relaxed">
-                    
-                    <section>
-                      <h4 className="text-[15px] font-bold text-gray-900 mb-2">1. 기간제교원 통상임금 vs 평균임금 논쟁의 배경</h4>
-                      <p className="mb-2">과거 기간제교원의 퇴직금 산정 시에는 주로 '평균임금'이 기준이 되었습니다. 이는 성과상여금이 퇴직 전 3개월간 지급된 임금 총액을 기초로 하는 평균임금에는 산입되었으나, 정기성·일률성·고정성을 요건으로 하는 통상임금에는 포함되지 않아 평균임금이 통상임금보다 대체로 높았기 때문입니다.</p>
-                      <p>하지만 대법원 전원합의체 판결(대법원 2021. 12. 16. 선고 2016다7975 판결 등)을 통해, 실제 근무 성적에 따라 지급액이 달라지는 성과급이라 하더라도 최소한도로 보장된 금액(최소 지급분)이 있다면 이는 통상임금에 해당한다는 법리가 확립되었습니다. 이러한 판례 변경으로 성과상여금 일부가 통상임금에 산입되면서 통상임금이 평균임금을 상회하는 현상이 발생하였고, 이에 따라 단가 결정의 분모인 '소정근로시간' 설정 문제가 핵심 쟁점이 되었습니다.</p>
-                    </section>
-
-                    <section>
-                      <h4 className="text-[15px] font-bold text-gray-900 mb-2">2. 퇴직금 산정의 원칙으로서 평균임금 우선주의</h4>
-                      <p>「근로자퇴직급여 보장법」 제8조 제1항에 따라 퇴직금은 퇴직 전 3개월 동안 지급된 임금의 총액을 그 기간의 총 일수로 나눈 '평균임금'을 기초로 산정하는 것이 원칙입니다. 「근로기준법」 제2조 제2항에서는 평균임금이 통상임금보다 낮을 경우에 한하여 예외적으로 통상임금을 적용하도록 규정하고 있는바, 이는 근로자의 실질적인 소득을 최대한 보장하려는 입법 취지를 담고 있습니다.</p>
-                    </section>
-
-                    <section>
-                      <h4 className="text-[15px] font-bold text-gray-900 mb-2">3. 기간제교원 보수 체계의 특수성과 통상임금 산정의 다의성</h4>
-                      <p className="mb-2">기간제교원의 보수는 「공무원 보수 규정」 등을 준용하고 있으나, 통상임금 산출 방식에는 다음과 같은 수리적 지표들이 존재합니다.</p>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li><strong>최저임금 판단 및 시간외근무수당(209시간):</strong> 정부가 공무원의 최저임금 충족 여부를 판단하거나 시간외근무수당을 산출할 때는 민간 표준인 209시간을 분모로 사용합니다. 이는 국가가 대외적으로 209시간을 근로 가치 평가의 공식적 지표로 활용하고 있음을 의미합니다.</li>
-                        <li><strong>연가보상비와 243시간(86%의 함의):</strong> 반면, 연가보상비 산식에서 사용하는 86%라는 계수는 월력 가동시간인 243시간 대비 209시간의 비율(209 / 243 = 약 0.86)과 일치합니다. 이는 국가가 정책적 필요에 따라 분모를 243시간으로 상정하여 단가를 조정하고 있음을 보여주는 근거입니다.</li>
-                      </ul>
-                    </section>
-
-                    <section>
-                      <h4 className="text-[15px] font-bold text-gray-900 mb-2">4. 결론: 평균임금 적용의 당위성</h4>
-                      <p className="mb-2">민간 근로기준법상 평균임금은 3개월 전체 일수를 분모로 하므로 사실상 243시간을 기준으로 하는 반면, 통상임금은 209시간을 기준으로 단가를 산출합니다. 따라서 분모가 작은 통상임금의 단가가 평균임금보다 높게 형성되는 것이 일반적인 수리적 원리입니다.</p>
-                      <p className="mb-2">만약 통상임금 산출 기준을 연가보상비 산식과 같이 주 243시간으로 상정한다면, 통상임금에 산입되지 않고 평균임금에만 반영되는 성과상여금 차액분(최소 지급분 제외 영역) 및 시간외근로수당 등의 영향으로 인해 여전히 평균임금이 통상임금을 상회할 것으로 판단됩니다.</p>
-                      <p className="font-semibold text-emerald-800 bg-emerald-50 p-3 rounded-lg border border-emerald-100 mt-3">
-                        결론적으로, 통상임금 산정 기초에 대해 209시간과 243시간을 혼용하는 등 다의적 해석이 존재하나, 퇴직금 산정의 대원칙은 실질적 생활 보장을 위한 평균임금에 있습니다. 따라서 기간제교원의 퇴직금은 이러한 법적 원칙과 수리적 일관성을 고려하여 평균임금을 기초로 산정함이 타당하다고 사료됩니다.
-                      </p>
-                    </section>
-
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      };
-
-      // === 렌더링: 퇴직금 계산 페이지 ===
-      const renderSeverancePage = () => {
-        const themeText = isTeacher ? 'text-emerald-700' : 'text-teal-700';
-        const themeBgLight = isTeacher ? 'bg-emerald-50 border-emerald-100' : 'bg-teal-50 border-teal-100';
-        const themeTextDark = isTeacher ? 'text-emerald-900' : 'text-teal-900';
-        const themeRing = isTeacher ? 'focus:ring-emerald-500' : 'focus:ring-teal-500';
-        const themeBgDark = isTeacher ? 'bg-emerald-900 shadow-emerald-200/50' : 'bg-teal-900 shadow-teal-200/50';
-        const themeTextMuted = isTeacher ? 'text-emerald-200' : 'text-teal-200';
-        const themeTextLight = isTeacher ? 'text-emerald-300' : 'text-teal-300';
-
-        return (
-          <div className="py-8 px-4 sm:px-6 lg:px-8 pb-20">
-            <div className="max-w-2xl mx-auto space-y-6">
-              <button onClick={() => setCurrentPage('main')} className="flex items-center text-gray-600 hover:text-gray-900 transition-colors font-medium">
-                <ArrowLeft className="w-5 h-5 mr-1" /> 메인 계산기로 돌아가기
-              </button>
-              
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div className={`flex items-center space-x-3 mb-4 border-b border-gray-100 pb-4 ${themeText}`}>
-                  <Coins className="w-8 h-8" />
-                  <h1 className="text-2xl font-bold">퇴직금 소요액 계산 {isTeacher ? '(기간제교원)' : ''}</h1>
-                </div>
-
-                <div className={`${themeBgLight} p-4 rounded-lg mb-6 flex justify-between items-center border`}>
-                  <div className="flex flex-col">
-                    <span className={`font-semibold ${themeTextDark}`}>가져온 최종 1일 임금</span>
-                    {!isTeacher && <span className={`text-xs ${themeText} mt-0.5`}>적용 기준: {empConfig.label}</span>}
-                  </div>
-                  <span className={`text-2xl font-bold ${themeText}`}>{formatNum(calc.finalDailyWage)} 원</span>
-                </div>
-                
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-1">기산일</label>
-                    <input type="date" value={severanceStartDate} onChange={(e) => setSeveranceStartDate(e.target.value)}
-                      className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 text-lg ${themeRing}`} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-1">기준일</label>
-                    <input type="date" value={severanceEndDate} onChange={(e) => setSeveranceEndDate(e.target.value)}
-                      className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 text-lg ${themeRing}`} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-1">기적립금액</label>
-                    <div className="flex items-center">
-                      <input type="text" value={formatNum(accumulatedAmount)} onChange={(e) => setAccumulatedAmount(e.target.value.replace(/,/g, ''))}
-                        placeholder="예: 5000000"
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 text-lg text-right ${themeRing}`} />
-                      <span className="ml-3 text-lg font-medium text-gray-700">원</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-gray-600 font-medium">총 재직일수</span>
-                    <span className="text-lg text-gray-800 font-bold">{formatNum(severanceCalc.totalDays)} 일</span>
-                  </div>
-                  <div className="flex justify-between items-end mb-4">
-                    <span className="text-gray-600 font-medium">퇴직금 소요액</span>
-                    <span className="text-lg text-gray-800 font-bold">{formatNum(severanceCalc.estimatedSeverance)} 원</span>
-                  </div>
-                  <div className={`${themeBgDark} rounded-xl p-6 text-center text-white mt-4 shadow-lg`}>
-                    <span className={`block text-sm ${themeTextMuted} mb-2`}>금회 적립소요금액</span>
-                    <span className="block text-4xl font-extrabold tracking-tight">
-                      {formatNum(severanceCalc.requiredAmount)}<span className={`text-xl font-medium ml-1 ${themeTextLight}`}>원</span>
-                    </span>
-                  </div>
-                  <div className="mt-3 text-xs text-gray-500 flex items-start">
-                    <Info className="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" />
-                    <span>
-                      퇴직금 소요액 = 최종 1일 임금 × 30일 × (총 재직일수 ÷ 365)<br/>
-                      금회 적립소요금액 = 퇴직금 소요액 - 기적립금액
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // === 렌더링: 연차수당 계산 페이지 ===
-      const renderAnnualLeavePage = () => {
-        const titleText = isTeacher ? '미사용 연차수당 계산 (기간제교원)' : '미사용 연차수당 계산';
-        return (
-          <div className="py-8 px-4 sm:px-6 lg:px-8 pb-20">
-            <div className="max-w-2xl mx-auto space-y-6">
-              <button onClick={() => setCurrentPage('main')} className="flex items-center text-gray-600 hover:text-gray-900 transition-colors font-medium">
-                <ArrowLeft className="w-5 h-5 mr-1" /> 메인 계산기로 돌아가기
-              </button>
-              
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div className="flex items-center space-x-3 text-indigo-700 mb-4 border-b border-gray-100 pb-4">
-                  <Umbrella className="w-8 h-8" />
-                  <h1 className="text-2xl font-bold">{titleText}</h1>
-                </div>
-
-                <div className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-indigo-900">기준 임금 (1일 통상임금)</span>
-                      {!isTeacher && <span className="text-xs text-indigo-700 mt-0.5">적용 기준: {empConfig.label}</span>}
-                    </div>
-                    <span className="text-2xl font-bold text-indigo-700">{formatNum(calc.ordinaryDaily)} 원</span>
-                  </div>
-                  <p className="text-xs text-indigo-600 text-right mt-1">※ 근로기준법상 연차수당은 <strong>'통상임금'</strong>을 기준으로 산정합니다.</p>
-                </div>
-                
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">미사용 연차 일수 입력</label>
-                    <div className="flex items-center">
-                      <input type="number" step="0.5" value={remainLeaveDays} onChange={(e) => setRemainLeaveDays(e.target.value)}
-                        placeholder="예: 5"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-lg text-right" />
-                      <span className="ml-3 text-lg font-medium text-gray-700">일</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <div className="bg-indigo-900 rounded-xl p-6 text-center text-white shadow-lg shadow-indigo-200/50">
-                    <span className="block text-sm text-indigo-200 mb-2">예상 연차수당 (세전)</span>
-                    <span className="block text-4xl font-extrabold tracking-tight">
-                      {formatNum(annualLeaveFinalCalc.estimatedAllowance)}<span className="text-xl font-medium ml-1 text-indigo-300">원</span>
-                    </span>
-                  </div>
-                  <div className="mt-3 text-xs text-gray-500 flex items-start">
-                    <Info className="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" />
-                    <span>계산식: 1일 통상임금 × 미사용 연차 일수</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div>
-          {currentPage === 'main' && renderMainPage()}
-          {currentPage === 'severance' && renderSeverancePage()}
-          {currentPage === 'annualLeave' && renderAnnualLeavePage()}
         </div>
-      );
-    }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
+        <div class="footer-text">
+            <p class="font-semibold text-gray-400">본 서비스는 교육공무직원 급여 관련 규정 자료를 바탕으로 답변을 생성합니다.</p>https://github.com/feedingstick321-maker/wage/blob/main/index.html
+            <p class="mt-2 text-[11px] opacity-40">AI 답변은 참고용이며, 정확한 사항은 소속 기관 인사/급여 담당자에게 확인하세요.</p>
+        </div>
+    </div>
+
+    <script>
+        // ★ Apps Script 웹 앱 배포 URL로 교체하세요
+        var API_URL = 'https://script.google.com/macros/s/AKfycbx7QntTFFk32Ld4b6ZQiYRTGC76cxHtqqldIFMOvfSxV5dfjlC7Kfm98G7p2u_K5wLH/exec';
+
+        var isProcessing = false;
+
+        function escapeHtml(str) {
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatAnswer(text) {
+            if (!text) return '답변을 가져오지 못했습니다.';
+            return escapeHtml(text)
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+                .replace(/(^|[^"'])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank">바로가기</a>');
+        }
+
+        function addMessage(text, isUser, elapsed) {
+            var chatBox = document.getElementById('chatBox');
+            var row = document.createElement('div');
+            row.className = isUser ? 'msg-row user' : 'msg-row ai';
+            
+            var elapsedHtml = '';
+            if (!isUser && elapsed) {
+                elapsedHtml = '<div class="elapsed-badge">⏱ ' + elapsed.toFixed(1) + '초</div>';
+            }
+
+            if (isUser) {
+                row.innerHTML = '<div class="msg-bubble user">' + escapeHtml(text) + '</div>';
+            } else {
+                row.innerHTML = '<div class="ai-icon">💰</div><div class="msg-bubble ai">' + formatAnswer(text) + elapsedHtml + '</div>';
+            }
+            
+            chatBox.appendChild(row);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function getTodayString() {
+            var now = new Date();
+            var days = ['일', '월', '화', '수', '목', '금', '토'];
+            return now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월 ' + now.getDate() + '일 ' + days[now.getDay()] + '요일';
+        }
+
+        function askQuick(question) {
+            document.getElementById('userInput').value = question;
+            sendMessage();
+        }
+
+        function sendMessage() {
+            if (isProcessing) return;
+
+            var input = document.getElementById('userInput');
+            var text = input.value.trim();
+            if (!text) return;
+
+            isProcessing = true;
+            input.value = '';
+            
+            addMessage(text, true);
+            
+            var loading = document.getElementById('loading');
+            var sendBtn = document.getElementById('sendBtn');
+            loading.classList.add('show');
+            sendBtn.disabled = true;
+
+            var queryForAi = '[현재 일시: ' + getTodayString() + '] ' + text;
+            var fetchStartTime = performance.now();
+
+            var callbackName = '_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+
+            window[callbackName] = function(data) {
+                var clientElapsed = (performance.now() - fetchStartTime) / 1000;
+                loading.classList.remove('show');
+
+                if (data && data.answer) {
+                    var elapsed = data.elapsed || clientElapsed;
+                    addMessage(data.answer, false, elapsed);
+                } else {
+                    addMessage('답변을 가져오지 못했습니다. 다시 시도해 주세요.', false);
+                }
+
+                isProcessing = false;
+                sendBtn.disabled = false;
+                input.focus();
+
+                delete window[callbackName];
+                if (scriptTag.parentNode) scriptTag.parentNode.removeChild(scriptTag);
+            };
+
+            var scriptTag = document.createElement('script');
+            scriptTag.src = API_URL + '?q=' + encodeURIComponent(queryForAi) + '&callback=' + callbackName;
+
+            scriptTag.onerror = function() {
+                loading.classList.remove('show');
+                addMessage('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.', false);
+                isProcessing = false;
+                sendBtn.disabled = false;
+                input.focus();
+                delete window[callbackName];
+                if (scriptTag.parentNode) scriptTag.parentNode.removeChild(scriptTag);
+            };
+
+            setTimeout(function() {
+                if (window[callbackName]) {
+                    loading.classList.remove('show');
+                    addMessage('응답 시간이 초과되었습니다. 다시 시도해 주세요.', false);
+                    isProcessing = false;
+                    sendBtn.disabled = false;
+                    delete window[callbackName];
+                    if (scriptTag.parentNode) scriptTag.parentNode.removeChild(scriptTag);
+                }
+            }, 120000);
+
+            document.body.appendChild(scriptTag);
+        }
+
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        window.onload = function() { document.getElementById('userInput').focus(); };
+    </script>
 </body>
 </html>
